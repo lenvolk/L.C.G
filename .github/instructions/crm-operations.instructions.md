@@ -22,4 +22,4 @@ Flag milestones that are:
 ## Update Request Drafting
 - Draft update request emails only.
 - Include milestone name, due date, and exact ask.
-- Use Kate's follow-up tone guidance.
+- Use LCG's follow-up tone guidance.

@@ -13,8 +13,8 @@ Capture action items and stage follow-through after {{meeting_name}} on {{meetin
 
 ## Steps
 1. Read vault context first:
-  - _kate/preferences.md
-  - _kate/communication-style.md
+  - _lcg/preferences.md
+  - _lcg/communication-style.md
   - Prior note: Meetings/{{meeting_date}}-{{meeting_file_slug}}.md (if it exists)
 2. Pull post-meeting context:
   - Meeting invite details and attendee list.

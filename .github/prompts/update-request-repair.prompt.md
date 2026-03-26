@@ -40,7 +40,7 @@ Use this exact structure:
 - Date: {{run_date}}
 - Customer Slug: {{customer_file_slug}}
 - Draft Count: {n}
-- Quality Bar: Kate edits <=2 sentences per draft
+- Quality Bar: LCG edits <=2 sentences per draft
 
 ## Draft Queue
 - [D] [Owner Name] - priority URGENT|HIGH - reason
@@ -57,7 +57,7 @@ Use this exact structure:
 	- Revised date if at risk
 
 	Thank you,
-	Kate
+	LCG
 
 ## Draft N
 - Repeat for each owner.

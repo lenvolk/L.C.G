@@ -31,7 +31,7 @@ Provides a repeatable, guardrail-protected workflow for managing Windows Task Sc
 
 1. **Inventory first** — always run the List flow before any create/update/remove.
 2. **Never modify system tasks** — filter out `\Microsoft\*`, `\Apple\*`, and other vendor paths.
-3. **Prefix all Kate-managed tasks** with `Kate-` so they can be identified and cleaned up safely.
+3. **Prefix all LCG-managed tasks** with `LCG-` so they can be identified and cleaned up safely.
 4. **Confirm before destructive actions** — present the task details and ask for explicit approval before `Unregister-ScheduledTask`.
 5. **Idempotent creates** — use `-Force` on `Register-ScheduledTask` to upsert, but only after showing the diff.
 
@@ -40,12 +40,12 @@ Provides a repeatable, guardrail-protected workflow for managing Windows Task Sc
 All tasks created by this skill MUST follow:
 
 ```
-Kate-<Purpose>[-<Qualifier>]
+LCG-<Purpose>[-<Qualifier>]
 ```
 
-Examples: `Kate-Morning-Prep`, `Kate-Daily-Sync`, `Kate-Vault-Backup`
+Examples: `LCG-Morning-Prep`, `LCG-Daily-Sync`, `LCG-Vault-Backup`
 
-This lets the inventory and cleanup flows scope to `Kate-*` without touching unrelated tasks.
+This lets the inventory and cleanup flows scope to `LCG-*` without touching unrelated tasks.
 
 ---
 
@@ -65,7 +65,7 @@ Get-ScheduledTask |
       Name     = $_.TaskName
       Path     = $_.TaskPath
       State    = $_.State
-      Managed  = if ($_.TaskName -like 'Kate-*') { 'Yes' } else { 'No' }
+      Managed  = if ($_.TaskName -like 'LCG-*') { 'Yes' } else { 'No' }
       Action   = ($_.Actions | ForEach-Object { "$($_.Execute) $($_.Arguments)" }) -join '; '
       Triggers = ($triggers -join ', ')
       LastRun  = if ($info.LastRunTime -gt [DateTime]'2000-01-01') { $info.LastRunTime.ToString('yyyy-MM-dd HH:mm') } else { 'Never' }
@@ -79,7 +79,7 @@ Get-ScheduledTask |
 Format as a markdown table for the user with columns: Name, Managed, State, Triggers, Action, Next Run.
 
 Group into two sections:
-1. **Kate-managed tasks** (`Managed = Yes`) — full detail.
+1. **LCG-managed tasks** (`Managed = Yes`) — full detail.
 2. **Other user tasks** — name, state, and next run only (keep compact).
 
 ### Step 3 — Sprawl Detection
@@ -89,9 +89,9 @@ Before proceeding to any create/update, check for:
 | Check | Condition | Action |
 |---|---|---|
 | **Duplicate name** | Proposed task name already exists | Show existing task, ask: update or pick a new name? |
-| **Overlapping trigger** | Another Kate-* task runs the same exe/script within ±5 min of proposed time | Warn the user and suggest consolidating |
-| **Stale tasks** | Kate-* task with State = `Disabled` or LastRun = `Never` and created >7 days ago | Flag for cleanup |
-| **Orphaned one-shots** | Kate-* task with a one-time trigger in the past and NextRun = N/A | Flag for removal |
+| **Overlapping trigger** | Another LCG-* task runs the same exe/script within ±5 min of proposed time | Warn the user and suggest consolidating |
+| **Stale tasks** | LCG-* task with State = `Disabled` or LastRun = `Never` and created >7 days ago | Flag for cleanup |
+| **Orphaned one-shots** | LCG-* task with a one-time trigger in the past and NextRun = N/A | Flag for removal |
 
 Present findings as a checklist before proceeding.
 
@@ -105,7 +105,7 @@ Only after completing Flow 1.
 
 | Parameter | Required | Default | Notes |
 |---|---|---|---|
-| Task name | Yes | — | Must start with `Kate-` |
+| Task name | Yes | — | Must start with `LCG-` |
 | Action (exe + args) | Yes | — | Typically `pwsh.exe -File <path>` or `pwsh.exe -Command <cmd>` |
 | Trigger type | Yes | — | `Once`, `Daily`, `Weekly`, `AtLogOn`, `AtStartup` |
 | Trigger time | If timed | — | For Once/Daily/Weekly |
@@ -141,7 +141,7 @@ Before registering, display:
 ╔══════════════════════════════════════════╗
 ║  TASK REGISTRATION PLAN                  ║
 ╠══════════════════════════════════════════╣
-║  Name:      Kate-Daily-Sync              ║
+║  Name:      LCG-Daily-Sync              ║
 ║  Action:    pwsh.exe -File sync.ps1      ║
 ║  Trigger:   Daily at 08:00 AM            ║
 ║  Run As:    jinle (Interactive, Limited)  ║
@@ -241,6 +241,6 @@ Since there is no UI, all output MUST be structured for terminal readability:
 - **Single task detail** → Key-value box (see registration plan format above).
 - **Sprawl warnings** → Checkbox list with recommended actions.
 - **Confirmations** → Single-line status with task name + state + next run.
-- **Grouped output** → Section headers separating Kate-managed vs. other tasks.
+- **Grouped output** → Section headers separating LCG-managed vs. other tasks.
 
 Always include the current time when showing next-run times so the user can gauge timing at a glance.

@@ -7,9 +7,9 @@ Today is {{TODAY}}. Produce the weekly ROB brief.
 
 ## Steps
 1. Read vault context first:
-	- _kate/operating-rhythm.md
-	- _kate/preferences.md
-	- _kate/learning-log.md
+	- _lcg/operating-rhythm.md
+	- _lcg/preferences.md
+	- _lcg/learning-log.md
 2. Review this week's calendar outcomes and next week's risks.
 3. Pull milestones due this week and next; include past due carryover.
 4. Summarize key CRM pipeline and milestone changes.

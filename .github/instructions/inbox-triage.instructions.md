@@ -8,7 +8,7 @@ applyTo: "**"
 - Treat Tier 2 VIP senders as HIGH by default.
 
 ## Classification Rules
-- Apply labels from the Triage Labels section in `_kate/preferences.md`.
+- Apply labels from the Triage Labels section in `_lcg/preferences.md`.
 - Every item gets exactly one **Priority** (P0-P3), one **Type**, and one or more **Signal** labels.
 - Classify each item as URGENT, HIGH, NORMAL, or LOW.
 - Separate items requiring response from FYI-only threads.

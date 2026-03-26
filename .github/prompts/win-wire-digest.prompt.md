@@ -7,8 +7,8 @@ Today is {{TODAY}}. Build an executive-ready Win Wire digest from the last {{WIN
 
 ## Steps
 1. Read vault context first:
-  - _kate/preferences.md
-  - _kate/communication-style.md
+  - _lcg/preferences.md
+  - _lcg/communication-style.md
 2. Pull mail threads with Win Wire naming variants:
   - "Win Wire", "WinWire", "WIN WIRE", "HLS Win Wire"
 3. Pull matching Teams references for the same window:

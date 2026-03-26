@@ -7,9 +7,9 @@ Today is {{TODAY}}. Build an STU highlights summary from the last {{WINDOW_DAYS}
 
 ## Steps
 1. Read vault context first:
-  - _kate/preferences.md
-  - _kate/communication-style.md
-  - _kate/operating-rhythm.md
+  - _lcg/preferences.md
+  - _lcg/communication-style.md
+  - _lcg/operating-rhythm.md
 2. Pull Teams messages with STU context:
   - STU updates, STU recap, STU highlights, Friday Huddle, STU/CSU sync.
 3. Pull related emails only if they add missing context.

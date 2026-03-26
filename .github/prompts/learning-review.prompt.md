@@ -6,24 +6,24 @@ agent: Chief of Staff
 Today is {{TODAY}}. Run the weekly learning review.
 
 ## Purpose
-Scan _kate/learning-log.md for recurring correction patterns and propose promotions into permanent vault rules. This closes the loop between daily corrections and durable system improvement.
+Scan _lcg/learning-log.md for recurring correction patterns and propose promotions into permanent vault rules. This closes the loop between daily corrections and durable system improvement.
 
 ## Inputs
-- _kate/learning-log.md
-- _kate/vip-list.md
-- _kate/preferences.md
-- _kate/operating-rhythm.md
-- _kate/communication-style.md
+- _lcg/learning-log.md
+- _lcg/vip-list.md
+- _lcg/preferences.md
+- _lcg/operating-rhythm.md
+- _lcg/communication-style.md
 
 ## Steps
-1. Read _kate/learning-log.md in full.
+1. Read _lcg/learning-log.md in full.
 2. Group corrections by topic (person, sender, classification pattern, suppression, or process).
 3. For each group with 3 or more entries:
    a. Identify the target vault file for promotion:
-      - Person/sender priority changes → _kate/vip-list.md
-      - Classification or suppression rules → _kate/preferences.md
-      - Cadence or timing adjustments → _kate/operating-rhythm.md
-      - Tone or drafting feedback → _kate/communication-style.md
+      - Person/sender priority changes → _lcg/vip-list.md
+      - Classification or suppression rules → _lcg/preferences.md
+      - Cadence or timing adjustments → _lcg/operating-rhythm.md
+      - Tone or drafting feedback → _lcg/communication-style.md
    b. Read the current target file content.
    c. Draft the exact text to add or change in the target file.
    d. Include a before/after diff for each proposed change.
@@ -55,7 +55,7 @@ For each candidate:
   - [entry 1 summary]
   - [entry 2 summary]
   - [entry 3+ summary]
-- **Target file:** _kate/[filename].md
+- **Target file:** _lcg/[filename].md
 - **Proposed change:**
   ```
   [exact text to add or replace in the target file]

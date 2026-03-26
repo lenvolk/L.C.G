@@ -18,7 +18,7 @@ Create a concise, leadership-ready summary from mixed mail and Teams signals whi
 ## Source Rules
 
 1. Vault-first context:
-   - Read `_kate/preferences.md`, `_kate/communication-style.md`, and `_kate/operating-rhythm.md`.
+   - Read `_lcg/preferences.md`, `_lcg/communication-style.md`, and `_lcg/operating-rhythm.md`.
 2. Bounded retrieval:
    - Default to last 7 days unless user specifies otherwise.
    - Expand to 30/120 days only when asked or when sparse.

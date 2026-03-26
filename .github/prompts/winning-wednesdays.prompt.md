@@ -7,9 +7,9 @@ Today is {{TODAY}}. Build the weekly channel summary for high-signal wins and ri
 
 ## Steps
 1. Read vault context first:
-  - _kate/preferences.md
-  - _kate/communication-style.md
-  - _kate/operating-rhythm.md
+  - _lcg/preferences.md
+  - _lcg/communication-style.md
+  - _lcg/operating-rhythm.md
   - Prior summary note for continuity (if available)
 2. Pull channel data from the last 7 days for target channels:
   - Winning Wednesdays

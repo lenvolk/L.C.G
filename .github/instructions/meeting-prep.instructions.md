@@ -21,6 +21,6 @@ For high-profile meetings, produce a one-page brief that can be scanned in two m
 
 ## Formatting
 - Use consistent structure from the meeting-brief template.
-- Bold the single most important thing Kate should know.
+- Bold the single most important thing the user should know.
 - Keep recommendations concrete and testable.
 - Hyperlink every M365 reference (emails, calendar events, Teams chats) using the `webLink` or `webUrl` returned by M365 tools. See M365 Source Linking Policy in copilot-instructions.md.

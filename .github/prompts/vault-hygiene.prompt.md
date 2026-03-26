@@ -11,8 +11,8 @@ Keep the vault fast and relevant by identifying stale content, migrating lingeri
 ## Inputs
 - Daily/ (all daily notes)
 - Meetings/ (all meeting notes)
-- _kate/learning-log.md
-- _kate/operating-rhythm.md
+- _lcg/learning-log.md
+- _lcg/operating-rhythm.md
 
 ## Steps
 1. Scan Daily/ for notes older than 14 days.
@@ -23,7 +23,7 @@ Keep the vault fast and relevant by identifying stale content, migrating lingeri
 3. Check for vault structure issues:
    - Daily notes missing required sections (per morning triage template).
    - Meeting notes missing required sections (per meeting brief template).
-   - Empty or placeholder-only files in _kate/.
+   - Empty or placeholder-only files in _lcg/.
 4. Compile vault health metrics:
    - Total daily notes count.
    - Daily notes older than 14 days.

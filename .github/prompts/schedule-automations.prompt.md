@@ -1,27 +1,27 @@
 ---
 agent: Chief of Staff
-description: Interactive wizard to browse Kate's automation catalog and schedule them as Windows tasks
+description: Interactive wizard to browse LCG's automation catalog and schedule them as Windows tasks
 ---
 
-# Schedule Kate Automations
+# Schedule LCG Automations
 
-Walk the user through Kate's automation catalog and help them schedule selected automations as Windows scheduled tasks. The user may be non-technical — explain everything in plain language, one step at a time.
+Walk the user through LCG's automation catalog and help them schedule selected automations as Windows scheduled tasks. The user may be non-technical — explain everything in plain language, one step at a time.
 
 ## Important Context
 
-- All scheduled tasks MUST follow the `Kate-` naming prefix convention.
+- All scheduled tasks MUST follow the `LCG-` naming prefix convention.
 - Before creating any task, ALWAYS run the task inventory from the windows-task-scheduler skill (Flow 1) to detect duplicates and sprawl.
 - All automations run through a single Node.js entry point: `node scripts/run.js <task-name>`.
-- The repo path is stored in `$env:MCAPS_REPO` or defaults to `$HOME\Repos\_InternalTools\KATE`.
+- The repo path is stored in `$env:MCAPS_REPO` or defaults to `$HOME\Repos\_InternalTools\L.C.G`.
 - No bash or Git Bash required — everything runs on Node.js (v18+).
 - The one exception is **Outlook Rules** (`setup-outlook-rules.ps1`) which uses PowerShell + Exchange Online directly.
 - Environment variables (`MCAPS_REPO`, `OBSIDIAN_VAULT_PATH`) must be set at the user level so scheduled tasks inherit them.
 
 ## Step 1 — Welcome & Explain
 
-Greet the user and briefly explain what Kate automations are:
+Greet the user and briefly explain what LCG automations are:
 
-> Kate has a set of automations that do recurring work for you — things like scanning your inbox every morning, reviewing milestones weekly, or cleaning up your knowledge vault. Each automation runs a pre-built workflow using AI to produce a ready-to-review artifact (a note, a brief, a draft email).
+> LCG has a set of automations that do recurring work for you — things like scanning your inbox every morning, reviewing milestones weekly, or cleaning up your knowledge vault. Each automation runs a pre-built workflow using AI to produce a ready-to-review artifact (a note, a brief, a draft email).
 >
 > I'll walk you through what's available, help you pick what you want to automate, and set up Windows scheduled tasks so they run on autopilot.
 
@@ -36,7 +36,7 @@ Present the catalog below. Use the EXACT formatting — numbered items, bold nam
 ### 📅 Daily Automations
 
 **1. Morning Triage**
-Your daily command center. Every weekday morning, Kate scans your inbox, checks today's calendar, flags urgent items, reviews milestone deadlines, and produces a single Daily note with everything you need to start your day. Think of it as a personal briefing that's ready before your first coffee.
+Your daily command center. Every weekday morning, LCG scans your inbox, checks today's calendar, flags urgent items, reviews milestone deadlines, and produces a single Daily note with everything you need to start your day. Think of it as a personal briefing that's ready before your first coffee.
 
 - **What you'll see:** A note in your vault's `Daily/` folder with sections for urgent items, meeting prep status, milestone alerts, action queue, and FYI items.
 - **Recommended schedule:** Monday–Friday at 7:00 AM (runs before you sit down).
@@ -46,19 +46,19 @@ Your daily command center. Every weekday morning, Kate scans your inbox, checks 
 ### 📆 Weekly Automations
 
 **2. Milestone Review**
-A weekly health check on your team's CRM milestones. Kate looks at each direct report's active milestones, flags anything overdue or at risk, and produces a consolidated status report. Ideal for Monday morning planning.
+A weekly health check on your team's CRM milestones. LCG looks at each direct report's active milestones, flags anything overdue or at risk, and produces a consolidated status report. Ideal for Monday morning planning.
 
 - **What you'll see:** A note in `Weekly/` with milestone status per team member, risk flags, and recommended follow-ups.
 - **Recommended schedule:** Monday at 8:00 AM.
 
 **3. Learning Review**
-Kate scans your learning log for recurring correction patterns — things she got wrong more than once — and proposes promoting those learnings into permanent vault rules so the same mistakes don't repeat.
+LCG scans your learning log for recurring correction patterns — things it got wrong more than once — and proposes promoting those learnings into permanent vault rules so the same mistakes don't repeat.
 
 - **What you'll see:** A note summarizing patterns found, promotion candidates, and suggested rule changes.
 - **Recommended schedule:** Friday at 4:00 PM (end-of-week reflection).
 
 **4. Vault Hygiene**
-A cleanup sweep of your Obsidian vault. Kate identifies stale notes, migrates lingering action items that should have moved forward, and reports on overall vault health.
+A cleanup sweep of your Obsidian vault. LCG identifies stale notes, migrates lingering action items that should have moved forward, and reports on overall vault health.
 
 - **What you'll see:** A note in `Daily/` with sections for lingering actions, archive candidates, and structural issues.
 - **Recommended schedule:** Sunday at 6:00 PM (clean slate for the week).
@@ -68,9 +68,9 @@ A cleanup sweep of your Obsidian vault. Kate identifies stale notes, migrates li
 ### 🛠️ One-Time Setup
 
 **5. Outlook Rules**
-Configures your Outlook inbox with rules aligned to Kate's triage system (priority labels, VIP routing, noise suppression). This is a one-time setup — run it once and your inbox starts pre-sorting automatically. Can be re-run safely if you need to update rules.
+Configures your Outlook inbox with rules aligned to LCG's triage system (priority labels, VIP routing, noise suppression). This is a one-time setup — run it once and your inbox starts pre-sorting automatically. Can be re-run safely if you need to update rules.
 
-- **What it does:** Creates Outlook server-side rules prefixed with `[Kate]` that categorize incoming mail by priority and type.
+- **What it does:** Creates Outlook server-side rules prefixed with `[LCG]` that categorize incoming mail by priority and type.
 - **Recommended:** Run once during initial setup, then again if you update your VIP list or triage preferences.
 
 ---
@@ -111,9 +111,9 @@ node scripts/run.js list
 
 If anything is missing, explain to the user in plain language:
 
-- **Node.js missing/old:** "Kate's automations need Node.js version 18 or newer. You can install it from https://nodejs.org."
-- **MCAPS_REPO not set:** "I need to know where the Kate repo lives on your machine. What folder is it in? I'll set it up for you."
-- **OBSIDIAN_VAULT_PATH not set:** "I need the path to your Obsidian vault so Kate knows where to write notes. What folder is your vault in?"
+- **Node.js missing/old:** "LCG's automations need Node.js version 18 or newer. You can install it from https://nodejs.org."
+- **MCAPS_REPO not set:** "I need to know where the LCG repo lives on your machine. What folder is it in? I'll set it up for you."
+- **OBSIDIAN_VAULT_PATH not set:** "I need the path to your Obsidian vault so LCG knows where to write notes. What folder is your vault in?"
 - **Copilot CLI missing:** "The automations use GitHub Copilot's CLI to run prompts. Let me check if it's installed through VS Code."
 
 Set any missing environment variables at the user level:
@@ -158,11 +158,11 @@ Use this lookup table to map user selections to task configuration. Do NOT show 
 
 | # | Catalog Name | Task Name | Runner Command | Default Time | Default Days |
 |---|---|---|---|---|---|
-| 1 | Morning Triage | Kate-Morning-Triage | `node scripts/run.js morning-triage` | 07:00 | Mon-Fri |
-| 2 | Milestone Review | Kate-Milestone-Review | `node scripts/run.js milestone-review` | 08:00 | Monday |
-| 3 | Learning Review | Kate-Learning-Review | `node scripts/run.js learning-review` | 16:00 | Friday |
-| 4 | Vault Hygiene | Kate-Vault-Hygiene | `node scripts/run.js vault-hygiene` | 18:00 | Sunday |
-| 5 | Outlook Rules | Kate-Outlook-Rules | `pwsh.exe -File scripts\setup-outlook-rules.ps1` | (one-time) | (one-time) |
+| 1 | Morning Triage | LCG-Morning-Triage | `node scripts/run.js morning-triage` | 07:00 | Mon-Fri |
+| 2 | Milestone Review | LCG-Milestone-Review | `node scripts/run.js milestone-review` | 08:00 | Monday |
+| 3 | Learning Review | LCG-Learning-Review | `node scripts/run.js learning-review` | 16:00 | Friday |
+| 4 | Vault Hygiene | LCG-Vault-Hygiene | `node scripts/run.js vault-hygiene` | 18:00 | Sunday |
+| 5 | Outlook Rules | LCG-Outlook-Rules | `pwsh.exe -File scripts\setup-outlook-rules.ps1` | (one-time) | (one-time) |
 
 For each selected automation:
 
@@ -170,7 +170,7 @@ For each selected automation:
    > "Morning Triage runs best as a daily weekday task at 7:00 AM so your briefing is ready before you start. Does 7:00 AM work, or would you prefer a different time?"
 
 2. **Explain what will happen.** In one sentence, tell them what the scheduled task will do:
-   > "I'll create a Windows scheduled task called Kate-Morning-Triage that runs every weekday at 7:00 AM. It'll launch Kate's morning workflow, scan your inbox and calendar, and save a briefing note to your vault."
+   > "I'll create a Windows scheduled task called LCG-Morning-Triage that runs every weekday at 7:00 AM. It'll launch LCG's morning workflow, scan your inbox and calendar, and save a briefing note to your vault."
 
 3. **Build and register the task** using the windows-task-scheduler skill (Flow 2). All Node tasks use the same pattern:
 

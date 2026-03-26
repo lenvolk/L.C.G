@@ -23,7 +23,7 @@ Prepare a brief for {{meeting_name}} on {{meeting_date}} for {{customer}}.
 	- What changed materially.
 	- What remains open.
 	- What is at risk.
-6. Assemble a one-page brief using _kate/templates/meeting-brief.md.
+6. Assemble a one-page brief using _lcg/templates/meeting-brief.md.
 7. Persist via OIL to Meetings/{{meeting_date}}-{{meeting_file_slug}}.md:
 	- Call `oil:get_note_metadata` for that path.
 	- If the note exists: use `oil:atomic_replace` with `mtime_ms` as `expected_mtime`.
@@ -49,7 +49,7 @@ Use this exact shape. Bold key scan-points; use sub-bullets for detail. See Visu
 	- 👤 **Name** · Role
 
 ## Why This Matters
-- **[single most important thing Kate should know]**
+- **[single most important thing the user should know]**
 - supporting context
 
 ## What Changed Since Last Touchpoint

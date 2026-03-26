@@ -9,7 +9,7 @@ Repair the learning review artifact so it is structurally valid.
 
 ## Inputs
 - Daily/{{TODAY}}-learning-review.md
-- _kate/learning-log.md
+- _lcg/learning-log.md
 
 ## Required Actions
 1. Read Daily/{{TODAY}}-learning-review.md.
@@ -37,7 +37,7 @@ Use this exact structure:
 - **Pattern:** [description]
 - **Evidence:** [count] entries from [date range]
   - [entry summary]
-- **Target file:** _kate/[filename].md
+- **Target file:** _lcg/[filename].md
 - **Proposed change:**
   ```
   [exact text]

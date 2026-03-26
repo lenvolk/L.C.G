@@ -7,8 +7,8 @@ Today is {{TODAY}}. Build a deal-summary draft package in Patty D style from the
 
 ## Steps
 1. Read vault context first:
-  - _kate/preferences.md
-  - _kate/communication-style.md
+  - _lcg/preferences.md
+  - _lcg/communication-style.md
 2. Pull source candidates from mail and Teams using name and alias variants:
   - Patty D
   - Patty Dilger

@@ -9,9 +9,9 @@ Repair today's Daily note so the Morning Triage artifact is structurally valid a
 
 ## Inputs
 - Daily/{{TODAY}}.md
-- _kate/vip-list.md
-- _kate/preferences.md
-- _kate/operating-rhythm.md
+- _lcg/vip-list.md
+- _lcg/preferences.md
+- _lcg/operating-rhythm.md
 
 ## Required Actions
 1. Read Daily/{{TODAY}}.md.

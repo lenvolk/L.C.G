@@ -3,7 +3,7 @@ agent: Chief of Staff
 ---
 # Morning Triage
 
-Today is {{TODAY}}. Run Kate's morning triage.
+Today is {{TODAY}}. Run LCG's morning triage.
 
 ## Execution Model
 
@@ -11,10 +11,10 @@ You do NOT have mail or calendar tools. All M365 operations (mail, calendar, Tea
 
 ## Steps
 1. Read vault preference context first:
-  - _kate/vip-list.md
-  - _kate/preferences.md
-  - _kate/operating-rhythm.md
-  - _kate/learning-log.md
+  - _lcg/vip-list.md
+  - _lcg/preferences.md
+  - _lcg/operating-rhythm.md
+  - _lcg/learning-log.md
 2. Inbox scan (delegate to `@m365-actions`):
   - Delegate a mail search to `@m365-actions`: retrieve unread and recently active email from the last 24 hours. The sub-agent should use `mail:SearchMessages` with KQL `received:>=<yesterday-ISO> AND isread:false`.
   - Once results are returned, classify each actionable thread as URGENT/HIGH/NORMAL/LOW.

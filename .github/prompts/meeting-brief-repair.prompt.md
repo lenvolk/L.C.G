@@ -49,7 +49,7 @@ Use this exact shape:
 	- 👤 **Name** · Role
 
 ## Why This Matters
-- **[single most important thing Kate should know]**
+- **[single most important thing the user should know]**
 - supporting context
 
 ## What Changed Since Last Touchpoint

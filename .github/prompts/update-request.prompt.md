@@ -9,8 +9,8 @@ Customer Slug: {{customer_file_slug}}
 
 ## Steps
 1. Read vault context first:
-	- _kate/communication-style.md
-	- _kate/preferences.md
+	- _lcg/communication-style.md
+	- _lcg/preferences.md
 2. Load customer milestones from CRM.
 3. Identify milestones that are past due, due in 7 days, or missing recent updates.
 4. Draft one concise update request per milestone owner.
@@ -37,7 +37,7 @@ Use this exact structure:
 - Date: {{run_date}}
 - Customer Slug: {{customer_file_slug}}
 - Draft Count: {n}
-- Quality Bar: Kate edits <=2 sentences per draft
+- Quality Bar: LCG edits <=2 sentences per draft
 
 ## Draft Queue
 - [D] [Owner Name] - priority URGENT|HIGH - reason
@@ -54,7 +54,7 @@ Use this exact structure:
 	- Revised date if at risk
 
 	Thank you,
-	Kate
+	LCG
 
 ## Draft N
 - Repeat for each owner.
