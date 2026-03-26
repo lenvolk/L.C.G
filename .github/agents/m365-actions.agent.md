@@ -11,7 +11,8 @@ tools:
   - "mail/*"
   - "sharepoint/*"
   - "word/*"
-user-invocable: false
+user-invocable: true
+model: GPT-5.4 (copilot)
 ---
 # @m365-actions — Microsoft 365 Action Agent
 

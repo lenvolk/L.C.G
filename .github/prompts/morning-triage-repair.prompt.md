@@ -18,8 +18,9 @@ Repair today's Daily note so the Morning Triage artifact is structurally valid a
 2. Rewrite only the "## Morning Triage" section using the exact headings and order below.
 3. Preserve factual content from the existing note where possible.
 4. If a section has no items, include one bullet: "- None.".
-5. Ensure RUN METADATA includes the exact counts line pattern and exactly 3 assumptions.
-6. Persist via OIL:
+5. Ensure MEETING PREP STATUS preserves explicit conflict handling details for overlapping meetings (priority score/rank and chosen vs not chosen notes when conflicts exist).
+6. Ensure RUN METADATA includes the exact counts line pattern, a conflict summary line, and exactly 3 assumptions.
+7. Persist via OIL:
   - Call `oil:get_note_metadata` for Daily/{{TODAY}}.md to get `mtime_ms`.
   - Use `oil:atomic_replace` with the full updated note content and the `mtime_ms` as `expected_mtime`.
   - Never use `create_file`.
@@ -33,6 +34,7 @@ Repair today's Daily note so the Morning Triage artifact is structurally valid a
 - Bold the key scan-point on every primary bullet; push detail into sub-bullets.
 - Sort MEETING PREP STATUS chronologically by meeting time.
 - Sort ACTION QUEUE by deadline (earliest first).
+- For overlaps, preserve deterministic tie-break ordering: higher priority score first, then earlier milestone due date, then earlier start time.
 - See Visual Formatting Policy in copilot-instructions.md.
 
 ## Required Template
@@ -51,11 +53,14 @@ Use this exact structure and heading text:
 ### MEETING PREP STATUS
 - [x] **HH:MM AM** · [Meeting name] READY - summary
 	- ✅ next action
+	- ⚖️ Priority: score={n} · rank #{n} in overlap group (if conflicted)
 - [/] **HH:MM AM** · [Meeting name] PARTIAL - gap summary
 	- ⚠️ what's incomplete or at risk
+	- ⚔️ Conflict: chosen/not chosen vs [Other meeting] (if conflicted)
 	- ⏭️ **Next:** action by **deadline**
 - [ ] **HH:MM AM** · [Meeting name] MISSING - what's needed
 	- ❌ what's missing
+	- ⚔️ Conflict: chosen/not chosen vs [Other meeting] (if conflicted)
 	- ⏭️ **Next:** action by **deadline**
 
 ### MILESTONE ALERTS
@@ -72,6 +77,7 @@ Use this exact structure and heading text:
 
 ### RUN METADATA
 - Section counts: URGENT={n}; HIGH={n}; MEETING PREP STATUS={n}; MILESTONE ALERTS={n}; ACTION QUEUE={n}; FYI={n}
+- Conflict summary: overlap_groups={n}; conflict_decisions={n}; unresolved_conflicts={n}
 - Assumptions to validate:
   - [assumption 1]
   - [assumption 2]

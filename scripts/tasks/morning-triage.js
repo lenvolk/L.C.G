@@ -33,6 +33,8 @@ export default {
     ],
     sectionCountPattern:
       /^- Section counts: URGENT=\d+; HIGH=\d+; MEETING PREP STATUS=\d+; MILESTONE ALERTS=\d+; ACTION QUEUE=\d+; FYI=\d+$/m,
+    conflictSummaryPattern:
+      /^- Conflict summary: overlap_groups=\d+; conflict_decisions=\d+; unresolved_conflicts=\d+$/m,
     assumptionCount: 3,
   },
 

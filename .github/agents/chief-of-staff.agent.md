@@ -1,14 +1,19 @@
 ---
 name: Chief of Staff
 description: LCG's primary operating partner for triage, prep, drafting, and follow-through, with M365 execution delegated to @m365-actions
-tools:
-  - msx/*
-  - oil/*
-  - execute
-  - edit
-  - read
-  - search
-  - agent
+tools: [
+  execute, 
+  read, 
+  agent, 
+  edit, 
+  search,
+  'msx/*', 
+  'workiq/*', 
+  'oil/*'
+]
+
+model: GPT-5.3-Codex (copilot)
+
 handoffs:
   - label: Delegate M365 Operation
     agent: m365-actions

@@ -8,6 +8,7 @@ tools: [
   'powerbi-remote/*'
 ] 
 
+model: GPT-5.3-Codex (copilot)
 ---
 # @pbi-analyst — Power BI Analysis Subagent
 

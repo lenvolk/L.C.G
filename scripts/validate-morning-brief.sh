@@ -69,6 +69,11 @@ if ! rg -q --pcre2 '^- Section counts: URGENT=\d+; HIGH=\d+; MEETING PREP STATUS
   exit 1
 fi
 
+if ! rg -q --pcre2 '^- Conflict summary: overlap_groups=\d+; conflict_decisions=\d+; unresolved_conflicts=\d+$' "$NOTE_PATH"; then
+  echo "[validate] FAIL: RUN METADATA is missing the required conflict-summary line format."
+  exit 1
+fi
+
 assumption_count="$({
   awk '
     BEGIN { in_metadata = 0; in_assumptions = 0; count = 0 }

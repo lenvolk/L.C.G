@@ -21,8 +21,19 @@ You do NOT have mail or calendar tools. All M365 operations (mail, calendar, Tea
   - Suppress low-signal noise (automated alerts, non-actionable FYI newsletters).
 3. Calendar scan (delegate to `@m365-actions`):
   - Delegate a calendar pull to `@m365-actions`: retrieve today's meetings with attendees. The sub-agent should use `calendar:ListCalendarView` with today's start/end datetimes.
-  - Once results are returned, mark each high-profile meeting's prep state as READY, PARTIAL, or MISSING.
-  - Add one-line reason and next action for PARTIAL/MISSING.
+  - Once results are returned, normalize each meeting with: subject, start/end, organizer, attendees, `webLink`, and response signal (accepted/tentative/declined if available, or subject prefixes like `Declined:`).
+  - Build invite conflict groups automatically: meetings are in conflict if time windows overlap (`A.start < B.end` and `B.start < A.end`).
+  - For each meeting, compute a deterministic priority score:
+    - +50 customer-facing signal (external attendee domain, customer keyword in subject, or customer/opportunity match from vault/CRM).
+    - +35 milestone-linked signal (meeting references customer/opportunity with due/past-due milestone in next 7 days).
+    - +25 VIP/executive signal (organizer/attendee appears in `_lcg/vip-list.md`).
+    - +15 prep-risk signal (meeting currently PARTIAL or MISSING).
+    - +10 owner signal (you are organizer or direct owner for the topic).
+    - -40 declined signal (subject starts with `Declined:` or response is declined).
+    - -15 low-signal recurring signal (office hours/AMA/townhall with no customer or milestone tie).
+  - Resolve each overlap group by selecting the highest score; tie-break by: earliest due customer milestone, then earliest start time, then larger external attendee count.
+  - Mark each high-profile meeting's prep state as READY, PARTIAL, or MISSING and include one-line reason.
+  - For every conflicted meeting, add an explicit conflict note and next action (attend, delegate, decline, or request notes).
 4. CRM pulse:
   - Pull milestones due in the next 7 days plus already past due.
   - Flag owners with stale or missing updates.
@@ -35,6 +46,7 @@ You do NOT have mail or calendar tools. All M365 operations (mail, calendar, Tea
   - FYI
 6. Add run metadata for correction loops:
   - Include one line for each section count: URGENT/HIGH/MEETING PREP STATUS/MILESTONE ALERTS/ACTION QUEUE/FYI.
+  - Include one line summarizing calendar conflict handling: overlap groups detected, conflict decisions made, unresolved conflicts.
   - Include one line listing top 3 assumptions that could be wrong.
 7. Persist output via OIL:
   - Target: Daily/{{TODAY}}.md
@@ -71,11 +83,14 @@ You do NOT have mail or calendar tools. All M365 operations (mail, calendar, Tea
 ### MEETING PREP STATUS
 - [x] **HH:MM AM** · [Meeting name](webLink) READY - summary
 	- ✅ next action
+  - ⚖️ Priority: score={n} · rank #{n} in overlap group (if conflicted)
 - [/] **HH:MM AM** · [Meeting name](webLink) PARTIAL - gap summary
 	- ⚠️ what's incomplete or at risk
+  - ⚔️ Conflict: chosen/not chosen vs [Other meeting](webLink) (if conflicted)
 	- ⏭️ **Next:** action by **deadline**
 - [ ] **HH:MM AM** · [Meeting name](webLink) MISSING - what's needed
 	- ❌ what's missing
+  - ⚔️ Conflict: chosen/not chosen vs [Other meeting](webLink) (if conflicted)
 	- ⏭️ **Next:** action by **deadline**
 
 ### MILESTONE ALERTS
@@ -94,6 +109,7 @@ Note: Every mail, calendar, and Teams reference MUST include the `webLink` or `w
 
 ### RUN METADATA
 - Section counts: URGENT={n}; HIGH={n}; MEETING PREP STATUS={n}; MILESTONE ALERTS={n}; ACTION QUEUE={n}; FYI={n}
+- Conflict summary: overlap_groups={n}; conflict_decisions={n}; unresolved_conflicts={n}
 - Assumptions to validate:
   - [assumption 1]
   - [assumption 2]
