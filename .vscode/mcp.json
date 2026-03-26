@@ -1,0 +1,56 @@
+{
+	"inputs": [
+		{
+			"id": "vault_path",
+			"type": "promptString",
+			"description": "Absolute path to your Obsidian vault",
+		}
+	],
+	"servers": {
+		"msx": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["-y", "@microsoft/msx-mcp-server@latest"]
+		},
+		"oil": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["-y", "@jinlee794/obsidian-intelligence-layer@latest", "mcp"],
+			"env": {
+				"OBSIDIAN_VAULT_PATH": "${input:vault_path}"
+			}
+		},
+		
+		"calendar": {
+			"type": "http",
+			"url": "https://agent365.svc.cloud.microsoft/agents/tenants/72f988bf-86f1-41af-91ab-2d7cd011db47/servers/mcp_CalendarTools",
+			"headers": {},
+		},
+		"teams": {
+			"type": "http",
+			"url": "https://agent365.svc.cloud.microsoft/agents/tenants/72f988bf-86f1-41af-91ab-2d7cd011db47/servers/mcp_TeamsServer",
+			"headers": {},
+		},
+		"mail":{
+			"type": "http",
+			"url": "https://agent365.svc.cloud.microsoft/agents/tenants/72f988bf-86f1-41af-91ab-2d7cd011db47/servers/mcp_MailTools",
+			"headers": {},
+		},
+		"sharepoint": {
+			"type": "http",
+			"url": "https://agent365.svc.cloud.microsoft/agents/tenants/72f988bf-86f1-41af-91ab-2d7cd011db47/servers/mcp_ODSPRemoteServer",
+			"headers": {},
+		},
+		"word": {
+			"type": "http",
+			"url": "https://agent365.svc.cloud.microsoft/agents/tenants/72f988bf-86f1-41af-91ab-2d7cd011db47/servers/mcp_WordServer",
+			"headers": {},
+		},
+		"onedrive": {
+			"type": "http",
+			"url": "https://agent365.svc.cloud.microsoft/agents/tenants/72f988bf-86f1-41af-91ab-2d7cd011db47/servers/mcp_OneDriveRemoteServer",
+			"headers": {},
+		}
+
+	}
+}
