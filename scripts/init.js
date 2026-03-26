@@ -4,8 +4,8 @@
  * Cross-platform environment initializer for mcaps-iq.
  *
  * Usage:
- *   node scripts/init.js          # verify prerequisites and guide local config
- *   node scripts/init.js --check  # verify environment without prompting
+ *   node scripts/init.js          # optional local tooling setup + environment bootstrap
+ *   node scripts/init.js --check  # verify runtime prerequisites and local tooling status
  *
  * Exit codes:
  *   0 — success
@@ -17,11 +17,26 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline";
+import { ensureGithubPackagesAuth } from "./github-packages-auth.js";
 
 // ── repo root (scripts/ lives one level below) ──────────────────────
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
-const MCP_CONFIG_PATH = join(ROOT, ".vscode", "mcp.json");
+
+// ── Package-based MCP server definitions ────────────────────────────
+// These servers are launched on-demand from npm via npx and do not
+// require local source checkout in this repo.
+const PACKAGE_SERVERS = [
+  {
+    name: "msx-crm",
+    package: "@microsoft/msx-mcp-server@latest",
+  },
+  {
+    name: "oil (Obsidian Intelligence Layer)",
+    package: "@jinlee794/obsidian-intelligence-layer@latest",
+    note: "Requires OBSIDIAN_VAULT_PATH to use vault tools.",
+  },
+];
 
 // ── prerequisite checks ─────────────────────────────────────────────
 const PREREQS = [
@@ -31,6 +46,14 @@ const PREREQS = [
 
 // ── helpers ─────────────────────────────────────────────────────────
 const isWindows = process.platform === "win32";
+
+function run(cmd, cwd) {
+  execSync(cmd, {
+    cwd,
+    stdio: "inherit",
+    shell: isWindows ? true : "/bin/sh",
+  });
+}
 
 function tryRun(cmd) {
   try {
@@ -95,114 +118,171 @@ function checkPrereqs() {
     warn("  Install: https://learn.microsoft.com/cli/azure/install-azure-cli");
   }
 
+  const ghVersion = tryRun("gh --version");
+  if (ghVersion) {
+    ok(`GitHub CLI ${ghVersion.split("\n")[0].replace("gh version ", "")}`);
+    const ghStatus = tryRun("gh auth status");
+    if (ghStatus && ghStatus.includes("read:packages")) {
+      ok("GitHub Packages auth available via GitHub CLI");
+    } else if (ghStatus) {
+      warn("GitHub CLI is signed in, but no account with read:packages was detected.");
+      warn("  Run: npm run auth:packages");
+    } else {
+      warn("GitHub CLI installed but not signed in.");
+      warn("  Run: npm run auth:packages");
+    }
+  } else {
+    console.log();
+    console.log("  \x1b[1m\x1b[31m╔══════════════════════════════════════════════════════════╗\x1b[0m");
+    console.log("  \x1b[1m\x1b[31m║                                                          ║\x1b[0m");
+    console.log("  \x1b[1m\x1b[31m║   GitHub CLI (gh) is NOT installed.                      ║\x1b[0m");
+    console.log("  \x1b[1m\x1b[31m║   It is required for private MCP package auth.           ║\x1b[0m");
+    console.log("  \x1b[1m\x1b[31m║                                                          ║\x1b[0m");
+    console.log("  \x1b[1m\x1b[31m║   It will be installed automatically during setup,       ║\x1b[0m");
+    console.log("  \x1b[1m\x1b[31m║   or install manually:                                   ║\x1b[0m");
+    console.log("  \x1b[1m\x1b[31m║                                                          ║\x1b[0m");
+    console.log("  \x1b[1m\x1b[33m║     macOS:    brew install gh                            ║\x1b[0m");
+    console.log("  \x1b[1m\x1b[33m║     Windows:  winget install --id GitHub.cli             ║\x1b[0m");
+    console.log("  \x1b[1m\x1b[33m║     Linux:    https://github.com/cli/cli#installation    ║\x1b[0m");
+    console.log("  \x1b[1m\x1b[31m║                                                          ║\x1b[0m");
+    console.log("  \x1b[1m\x1b[31m╚══════════════════════════════════════════════════════════╝\x1b[0m");
+    console.log();
+  }
+
   return passed;
 }
 
-// ── GitHub Packages auth check ──────────────────────────────────────
-function checkGitHubPackagesAuth() {
-  heading("Checking GitHub Packages authentication");
-
-  // Read user-level .npmrc to look for a GitHub Packages auth token
-  const home = process.env.HOME || process.env.USERPROFILE;
-  const userNpmrc = join(home, ".npmrc");
-
-  if (!existsSync(userNpmrc)) {
-    fail("No user-level .npmrc found — GitHub Packages auth is not configured.");
-    printGitHubAuthHelp();
-    return false;
+// ── server initialization ───────────────────────────────────────────
+function initServers() {
+  heading("Package-based MCP servers (npx)");
+  for (const server of PACKAGE_SERVERS) {
+    ok(`${server.name} — resolved at runtime via npx (${server.package})`);
+    if (server.note) {
+      console.log(`    ${server.note}`);
+    }
   }
+  console.log("    Private GitHub Packages can be bootstrapped with: npm run auth:packages");
 
-  const content = readFileSync(userNpmrc, "utf-8");
-
-  // Check for an auth token for npm.pkg.github.com
-  const hasToken =
-    content.includes("//npm.pkg.github.com/:_authToken=") ||
-    content.includes("//npm.pkg.github.com/:_auth=");
-
-  if (!hasToken) {
-    fail("GitHub Packages auth token not found in ~/.npmrc");
-    printGitHubAuthHelp();
-    return false;
-  }
-
-  // Verify the token actually works by probing a known package
-  const probe = tryRun(
-    "npm view @microsoft/msx-mcp-server version --registry=https://npm.pkg.github.com 2>&1"
-  );
-  if (probe && !probe.includes("ERR") && !probe.includes("401") && !probe.includes("404")) {
-    ok("GitHub Packages auth token is valid.");
-    return true;
-  }
-
-  // Token exists but might be expired or invalid
-  warn("GitHub Packages auth token found but may be expired or invalid.");
-  printGitHubAuthHelp();
-  return false;
-}
-
-function printGitHubAuthHelp() {
-  console.log(`
-  MCP servers (@microsoft/msx-mcp-server, @jinlee794/obsidian-intelligence-layer)
-  are published to GitHub Packages, which requires authentication.
-
-  The project .npmrc already routes these scopes to the right registry.
-  You just need a personal access token (PAT) in your user-level ~/.npmrc.
-
-  ┌─────────────────────────────────────────────────────────────────┐
-  │  Option A — Use the GitHub CLI (recommended):                   │
-  │                                                                 │
-  │    npm login --registry=https://npm.pkg.github.com              │
-  │                                                                 │
-  │  When prompted, use your GitHub username, and a personal        │
-  │  access token (classic) with the  read:packages  scope          │
-  │  as your password.                                              │
-  │                                                                 │
-  │  Option B — Add the token manually to ~/.npmrc:                 │
-  │                                                                 │
-  │    //npm.pkg.github.com/:_authToken=ghp_YOUR_TOKEN_HERE         │
-  │                                                                 │
-  │  Create a token at:                                             │
-  │    https://github.com/settings/tokens                           │
-  │    → Generate new token (classic)                               │
-  │    → Select scope:  read:packages                               │
-  └─────────────────────────────────────────────────────────────────┘
-`);
-}
-
-function checkWorkspaceConfig() {
-  heading("Checking workspace configuration");
-
-  let passed = true;
-
-  if (existsSync(MCP_CONFIG_PATH)) {
-    ok("VS Code MCP config found (.vscode/mcp.json)");
-  } else {
-    fail("Missing .vscode/mcp.json");
-    passed = false;
-  }
-
-  const envVars = parseEnvFile(join(ROOT, ".env"));
-  if (envVars.OBSIDIAN_VAULT_PATH) {
-    ok(`Vault path configured: ${envVars.OBSIDIAN_VAULT_PATH}`);
-  } else {
-    warn("OBSIDIAN_VAULT_PATH not set in .env — OIL tools will prompt or fail until configured.");
-  }
-
-  return passed;
+  return true;
 }
 
 // ── check-only mode ─────────────────────────────────────────────────
 function checkOnly() {
   const prereqsOk = checkPrereqs();
-  const ghAuthOk = checkGitHubPackagesAuth();
-  const workspaceOk = checkWorkspaceConfig();
 
-  if (prereqsOk && ghAuthOk && workspaceOk) {
-    heading("Environment is ready ✔");
-  } else {
-    heading("Environment has issues — run `node scripts/init.js` to fix");
+  heading("Checking package-based MCP servers");
+  for (const server of PACKAGE_SERVERS) {
+    ok(`${server.name} — configured for npx package launch (${server.package})`);
+    if (server.note) {
+      console.log(`    ${server.note}`);
+    }
   }
-  return prereqsOk && ghAuthOk && workspaceOk;
+  console.log("    Private GitHub Packages bootstrap: npm run auth:packages");
+
+  if (prereqsOk) {
+    heading("Runtime environment is ready ✔");
+  } else {
+    heading("Runtime prerequisites have issues — fix the errors above");
+  }
+  return prereqsOk;
+}
+
+// ── global alias registration ───────────────────────────────────────
+function printAliasFallback() {
+  const binPath = join(ROOT, "bin", "mcaps.js");
+  if (isWindows) {
+    const escaped = binPath.replace(/\\/g, "\\\\");
+    console.log();
+    warn("  Alternatives for PowerShell:");
+    warn("");
+    warn("  Option 1 — Add a function to your PowerShell profile:");
+    warn(`    Add-Content $PROFILE 'function mcaps { node "${escaped}" @args }'`);
+    warn("    . $PROFILE   # reload your profile");
+    warn("");
+    warn("  Option 2 — Use from the repo directory:");
+    warn("    node bin\\mcaps.js");
+    warn("");
+    warn("  Option 3 — Retry from an elevated terminal:");
+    warn("    npm link --ignore-scripts");
+  } else {
+    warn("  Try: sudo npm link --ignore-scripts");
+    warn("  Or with nvm/fnm (no sudo): npm link --ignore-scripts");
+  }
+}
+
+function registerAlias() {
+  heading("Registering 'mcaps' CLI alias");
+
+  // Ensure bin script is executable on Unix
+  if (!isWindows) {
+    const binScript = join(ROOT, "bin", "mcaps.js");
+    try {
+      execSync(`chmod +x "${binScript}"`, { stdio: "pipe" });
+    } catch { /* best-effort */ }
+  }
+
+  // Check if mcaps is already linked and working
+  const whichCmd = isWindows ? "where mcaps" : "which mcaps";
+  const existing = tryRun(whichCmd);
+
+  try {
+    // --ignore-scripts prevents recursive postinstall
+    // --force overwrites if already linked (avoids EEXIST on re-install)
+    // Use pipe stdio to suppress noisy npm force/warn output
+    execSync("npm link --ignore-scripts --force", {
+      cwd: ROOT,
+      stdio: ["pipe", "pipe", "pipe"],
+      shell: isWindows ? true : "/bin/sh",
+    });
+  } catch {
+    // If link failed but mcaps already exists and works, that's fine
+    if (existing) {
+      ok("'mcaps' is already registered globally — no changes needed.");
+      return true;
+    }
+    warn("Could not register global alias automatically.");
+    printAliasFallback();
+    return false;
+  }
+
+  // Verify the command is actually reachable after linking
+  const found = tryRun(whichCmd);
+
+  if (found) {
+    ok("'mcaps' is now available globally — try it from any directory!");
+    return true;
+  }
+
+  // npm link appeared to succeed but the command isn't callable
+  warn("npm link succeeded, but 'mcaps' was not found in your PATH.");
+
+  if (isWindows) {
+    const npmPrefix = tryRun("npm config get prefix");
+    if (npmPrefix) {
+      warn(`  npm global bin directory: ${npmPrefix}`);
+      warn("");
+      warn("  Add it to your PATH for this session:");
+      warn(`    $env:PATH += ";${npmPrefix}"`);
+      warn("");
+      warn("  Or make it permanent:");
+      warn(`    [Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";${npmPrefix}", "User")`);
+    }
+
+    // Check PowerShell execution policy (common blocker for .ps1 shims)
+    const policy = tryRun('powershell -NoProfile -Command "Get-ExecutionPolicy"');
+    if (policy && policy.toLowerCase() === "restricted") {
+      warn("");
+      warn("  PowerShell execution policy is 'Restricted' — .ps1 scripts are blocked.");
+      warn("  Fix:  Set-ExecutionPolicy RemoteSigned -Scope CurrentUser");
+    }
+
+    printAliasFallback();
+  } else {
+    warn("  Check: npm config get prefix");
+    warn("  Make sure <prefix>/bin is in your PATH.");
+  }
+
+  return false;
 }
 
 // ── .env configuration ──────────────────────────────────────────────
@@ -278,9 +358,6 @@ if (checkMode) {
     process.exit(1);
   }
 
-  checkGitHubPackagesAuth();
-  checkWorkspaceConfig();
-
   // ── risk acknowledgement ────────────────────────────────────────
   heading("⚠  Important — Please Read");
   console.log(`
@@ -307,30 +384,68 @@ if (checkMode) {
     warn("By using this toolkit you accept the risks described above.");
   }
 
-  heading("All done ✔");
+  const serversOk = initServers();
+  if (serversOk) {
+    // ── GitHub Packages auth ────────────────────────────────────
+    heading("GitHub Packages authentication");
+    try {
+      await ensureGithubPackagesAuth();
+    } catch (err) {
+      warn(err.message);
+      warn("You can retry later with: npm run auth:packages");
+      warn("Or open Copilot Chat (Cmd+Shift+I) and ask: 'Help me debug my MCP package auth setup'");
+    }
 
-  // Check if already signed in to provide the right next step
-  const account = tryRun("az account show --query user.name -o tsv");
-  if (account) {
-    console.log(`
+    await configureEnv();
+    const aliasOk = registerAlias();
+    heading("All done ✔");
+
+    // Prominent mcaps alias banner
+    if (aliasOk) {
+      console.log(`
+  ┌─────────────────────────────────────────────────────────────┐
+  │                                                             │
+  │   ★  The 'mcaps' command is now available globally.         │
+  │                                                             │
+  │   Open any terminal, from any directory, and type:          │
+  │                                                             │
+  │       mcaps                                                 │
+  │                                                             │
+  │   This launches Copilot CLI with all MCAPS IQ servers,      │
+  │   agents, and skills loaded — no need to cd into the repo.  │
+  │                                                             │
+  │   Requires: Copilot CLI (brew install copilot-cli)          │
+  │   Fallback: opens VS Code if Copilot CLI isn't installed.   │
+  │                                                             │
+  └─────────────────────────────────────────────────────────────┘
+`);
+    }
+
+    // Check if already signed in to provide the right next step
+    const account = tryRun("az account show --query user.name -o tsv");
+    if (account) {
+      console.log(`
   You're signed in as ${account}. Everything is ready!
 
   Next steps:
     1. Open this repo in VS Code:  code .
-    2. VS Code will launch the configured MCP servers from .vscode/mcp.json
-    3. Set your vault path:  echo "OBSIDIAN_VAULT_PATH=/your/path" >> .env
-    4. Bootstrap your vault: npm run vault:init
-    5. Open Copilot chat (Cmd+Shift+I) and try: "Who am I in MSX?"
+    2. MCP servers auto-start via .vscode/mcp.json
+    3. Open Copilot chat (Cmd+Shift+I) and try: "Who am I in MSX?"
+    4. Or just run 'mcaps' from any terminal!
 `);
-  } else {
-    console.log(`
+    } else {
+      console.log(`
   Next steps:
     1. Connect to Microsoft VPN
     2. Sign in to Azure:        az login
     3. Open this repo in VS Code:  code .
-    4. Set your vault path:  echo "OBSIDIAN_VAULT_PATH=/your/path" >> .env
-    5. Bootstrap your vault: npm run vault:init
-    6. Open Copilot chat (Cmd+Shift+I) and try: "Who am I in MSX?"
+    4. MCP servers auto-start via .vscode/mcp.json
+    5. Open Copilot chat (Cmd+Shift+I) and try: "Who am I in MSX?"
+    6. Or just run 'mcaps' from any terminal!
 `);
+    }
+  } else {
+    heading("Some steps failed — see errors above");
+    process.exit(1);
   }
 }

@@ -10,7 +10,7 @@
 		"msx": {
 			"type": "stdio",
 			"command": "npx",
-			"args": ["-y", "@microsoft/msx-mcp-server@latest"]
+			"args": ["-y", "--registry", "https://npm.pkg.github.com", "@microsoft/msx-mcp-server@latest"]
 		},
 		"oil": {
 			"type": "stdio",
@@ -19,6 +19,11 @@
 			"env": {
 				"OBSIDIAN_VAULT_PATH": "${input:vault_path}"
 			}
+		},
+		"workiq": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["-y", "@microsoft/workiq@latest", "mcp"],
 		},
 		
 		"calendar": {
