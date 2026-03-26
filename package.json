@@ -10,7 +10,7 @@
   "scripts": {
     "setup": "node scripts/init.js",
     "check": "node scripts/init.js --check",
-    "vault:init": "bash scripts/bootstrap-kate-vault.sh",
+    "vault:init": "bash scripts/bootstrap-lcg-vault.sh",
     "task": "node scripts/run.js",
     "task:list": "node scripts/run.js list",
     "task:morning": "node scripts/run.js morning-triage",
