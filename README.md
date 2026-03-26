@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="image/README/avatar.png" alt="K.A.T.E. IQ" width="200">
+  <img src="image/README/avatar.png" alt="L.C.G. — Let Copilot Grind" width="200">
 </p>
 
-# K.A.T.E.
+# L.C.G.
 
-### **Knowledge Automation & Triage Engine**
+### Let Copilot Grind
 
-*An AI-powered Chief of Staff framework built on GitHub Copilot's customization layer.*
+*Stop doing the grind yourself. Let Copilot do it.*
 
 <br/>
 
@@ -19,23 +19,23 @@
 
 ---
 
-## The Problem
+## The Grind is Real
 
-Chiefs of staff and executive assistants face a compounding information challenge:
+You already know the pain:
 
-- **Dense inboxes** — no pre-processed priority view across hundreds of daily messages
-- **Back-to-back meetings** — prep requires hunting across 5+ disconnected tools
-- **Recurring deliverables** — rebuilt from scratch every cycle instead of compounding
-- **Institutional memory** — lives in one person's head, not in a durable system
-- **Action tracking** — manual follow-up scattered across email, CRM, and chat
+- **Hundreds of emails** — and you're manually deciding what matters before your first coffee
+- **Back-to-back meetings** — prep means hunting across 5+ tools you didn't build and don't love
+- **Same deliverables, every week** — rebuilt from scratch instead of compounding
+- **Institutional memory** — trapped in your head, not in a system
+- **Follow-ups everywhere** — scattered across email, CRM, Teams, and sticky notes
 
-No single tool today provides deep M365/CRM integration, persistent personalization, *and* trust-appropriate automation where the human always owns the final decision.
+No single tool today gives you deep M365/CRM integration, persistent personalization, *and* trust-appropriate automation where you still own every final call. So you grind. Every. Single. Day.
 
 ---
 
-## How K.A.T.E. Solves It
+## Let Copilot Grind Instead
 
-K.A.T.E. turns GitHub Copilot into a tireless junior staffer that **pre-processes, pre-researches, and pre-drafts** — so the operator can focus on judgment, tone, and relationships.
+L.C.G. turns GitHub Copilot into the tireless junior staffer you always wanted — one that **pre-processes, pre-researches, and pre-drafts everything** so you can focus on judgment, relationships, and the work that actually requires a human.
 
 ### The Three-Layer Architecture
 
@@ -72,15 +72,15 @@ K.A.T.E. turns GitHub Copilot into a tireless junior staffer that **pre-processe
 
 | Layer                           | What it does                                                | Why it matters                                                             |
 | ------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------- |
-| **Instructions & Skills** | Plain-English markdown files that define behavior           | Anyone can read, edit, and version them — no code needed                  |
-| **MCP Servers**           | Connect Copilot to live data (email, CRM, calendar, vault)  | One agent queries 12 systems in a single turn                              |
-| **Second Brain**          | Local Obsidian vault acts as an L1 cache of durable context | Lightning-fast, zero-hallucination recall — system gets smarter over time |
+| **Instructions & Skills** | Plain-English markdown files that define behavior           | Anyone can read, edit, and version them — zero code required              |
+| **MCP Servers**           | Connect Copilot to live data (email, CRM, calendar, vault)  | One prompt, 12 systems queried — Copilot does the legwork                 |
+| **Second Brain**          | Local Obsidian vault acts as an L1 cache of durable context | The system remembers so you don't have to — gets smarter every cycle     |
 
 ---
 
 ## Agents
 
-K.A.T.E. uses a **two-agent architecture** that separates strategy from execution:
+L.C.G. uses a **two-agent architecture** — you think, Copilot grinds:
 
 ```
  +-------------------------------------------------------------+
@@ -117,13 +117,13 @@ K.A.T.E. uses a **two-agent architecture** that separates strategy from executio
 | **Chief of Staff** | Strategy, triage, prep, drafting  | CRM, Vault, Search, Edit                | Never sends email directly; stages all CRM writes                         |
 | **m365-actions**   | Execute delegated M365 operations | Mail, Calendar, Teams, SharePoint, Word | Only acts on scoped instructions from parent; never makes strategic calls |
 
-> The Chief of Staff resolves all identity and business context from the vault *before* handing off to m365-actions — keeping latency low and hallucination risk near zero.
+> The brain resolves all context from the vault *before* handing off to the hands — so the grind is fast, accurate, and hallucination-free.
 
 ---
 
-## Key Workflows
+## What Copilot Grinds For You
 
-All workflows are invoked via **`/prompt`** in Copilot Chat — type `/prompt` and select from the list.
+All workflows are one `/prompt` away — type it in Copilot Chat and pick from the list.
 
 ### Daily Operations
 
@@ -156,7 +156,7 @@ All workflows are invoked via **`/prompt`** in Copilot Chat — type `/prompt` a
 
 ### Self-Correction
 
-Every core workflow has a **repair** prompt that auto-fixes validation failures:
+Copilot even fixes its own mistakes. Every core workflow has a **repair** prompt that auto-corrects validation failures:
 
 | Repair Prompt                | Fixes                    |
 | ---------------------------- | ------------------------ |
@@ -185,8 +185,8 @@ Every core workflow has a **repair** prompt that auto-fixes validation failures:
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/JinLee794/K.A.T.E.git
-cd K.A.T.E
+git clone https://github.com/JinLee794/L.C.G.git
+cd L.C.G
 ```
 
 ### 2. Install everything (one command)
@@ -230,7 +230,7 @@ Open Copilot Chat → select the **Chief of Staff** agent → you're live.
 ## Project Structure
 
 ```
-K.A.T.E/
+L.C.G/
 ├── .github/
 │   ├── instructions/        ← 5 behavior rules (triage, prep, CRM, comms, copilot)
 │   ├── prompts/             ← 19 workflow templates (morning triage, meeting brief, etc.)
@@ -238,7 +238,7 @@ K.A.T.E/
 │   └── agents/              ← Agent definitions (Chief of Staff)
 ├── scripts/                 ← Automation scripts (morning prep, meeting prep, etc.)
 ├── vault-starter/           ← Obsidian vault templates & preferences
-│   ├── _kate/               ← Operating rules, VIP list, learning log
+│   ├── _LCG/               ← Operating rules, VIP list, learning log
 │   ├── Daily/               ← Morning triage output
 │   └── Meetings/            ← Meeting prep one-pagers
 ├── _specs/                  ← Design specifications & architecture docs
@@ -249,21 +249,21 @@ K.A.T.E/
 
 ## MCP Servers
 
-K.A.T.E. connects to MCP servers through the workspace MCP config in [.vscode/mcp.json](/Users/jinle/Repos/_InternalTools/KATE/.vscode/mcp.json).
+L.C.G. connects to MCP servers through the workspace MCP config in [.vscode/mcp.json](/Users/jinle/Repos/_InternalTools/LCG/.vscode/mcp.json).
 
 ### Workspace-Configured Servers
 
-| Server | Transport | Purpose |
-| ------ | --------- | ------- |
-| **msx-crm** | `npx` | Microsoft Sales Experience integration |
-| **oil** | `npx` | Obsidian vault read/write/search |
-| **calendar / mail / teams / sharepoint / word / onedrive** | HTTP | Microsoft 365 data and actions |
+| Server                                                           | Transport | Purpose                                |
+| ---------------------------------------------------------------- | --------- | -------------------------------------- |
+| **msx-crm**                                                | `npx`   | Microsoft Sales Experience integration |
+| **oil**                                                    | `npx`   | Obsidian vault read/write/search       |
+| **calendar / mail / teams / sharepoint / word / onedrive** | HTTP      | Microsoft 365 data and actions         |
 
 ---
 
 ## Trust Model
 
-K.A.T.E. is designed with a strict **human-in-the-loop** trust model:
+Copilot grinds, but **you stay in control**. Strict human-in-the-loop on everything that matters:
 
 | Policy                 | Behavior                                      |
 | ---------------------- | --------------------------------------------- |
@@ -278,19 +278,19 @@ K.A.T.E. is designed with a strict **human-in-the-loop** trust model:
 
 ## npm Scripts (Developer Reference)
 
-These scripts support setup, headless automation, and validation. Most day-to-day use goes through `/prompt` in Copilot Chat (see [Key Workflows](#key-workflows) above).
+For when you want to let Copilot grind headlessly. Most day-to-day use goes through `/prompt` in Copilot Chat (see [What Copilot Grinds For You](#what-copilot-grinds-for-you) above).
 
-| Category             | Command                              | Description                             |
-| -------------------- | ------------------------------------ | --------------------------------------- |
+| Category             | Command                              | Description                                  |
+| -------------------- | ------------------------------------ | -------------------------------------------- |
 | **Setup**      | `npm run setup`                    | Verify prerequisites and configure local env |
-|                      | `npm run check`                    | Verify environment and workspace config |
-|                      | `npm run vault:init`               | Bootstrap Obsidian vault from templates |
-| **Validation** | `npm run morning:validate`         | Validate morning brief output           |
-|                      | `npm run meeting:validate`         | Validate meeting brief                  |
-|                      | `npm run update-request:validate`  | Validate update request output          |
-|                      | `npm run learning:review:validate` | Validate learning review output         |
-| **Eval**       | `npm run eval`                     | Run evaluation suite                    |
-|                      | `npm run eval:live`                | Run live evaluation tests               |
+|                      | `npm run check`                    | Verify environment and workspace config      |
+|                      | `npm run vault:init`               | Bootstrap Obsidian vault from templates      |
+| **Validation** | `npm run morning:validate`         | Validate morning brief output                |
+|                      | `npm run meeting:validate`         | Validate meeting brief                       |
+|                      | `npm run update-request:validate`  | Validate update request output               |
+|                      | `npm run learning:review:validate` | Validate learning review output              |
+| **Eval**       | `npm run eval`                     | Run evaluation suite                         |
+|                      | `npm run eval:live`                | Run live evaluation tests                    |
 
 ---
 
@@ -307,6 +307,7 @@ npm login --registry=https://npm.pkg.github.com
 ```
 
 When prompted:
+
 - **Username:** your GitHub username
 - **Password:** a personal access token (classic) with the `read:packages` scope
 - **Email:** your GitHub email
@@ -339,6 +340,7 @@ This usually means you're running a Node version older than 18. Check with `node
 ### `copilot CLI not found` when running automations
 
 The task runner uses GitHub Copilot's CLI binary. It looks for it in:
+
 1. `COPILOT_CLI_PATH` environment variable
 2. `copilot` on your system PATH
 3. VS Code's bundled location (`AppData/Code/User/globalStorage/github.copilot-chat/copilotCli/`)
@@ -357,6 +359,6 @@ az login
 
 <div align="center">
 
-*K.A.T.E. — Private repository — Internal use only*
+*L.C.G. — Let Copilot Grind — Private repository — Internal use only*
 
 </div>
