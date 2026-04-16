@@ -317,7 +317,7 @@ function generateMarkdown() {
         : "❌ MISSING";
       const oppCell = mdLink(r.oppName, r.oppLink);
       lines.push(
-        `| **${esc(r.account)}** | ${oppCell} | ${playLabel} | ${esc(r.expectedPlay)} | ${esc(r.workload)} | ${esc(r.owner)} |`
+        `| **${esc(r.account)}** | ${oppCell} | ${playLabel} | → **${esc(r.expectedPlay)}** | ${esc(r.workload)} | ${esc(r.owner)} |`
       );
     }
     lines.push("");

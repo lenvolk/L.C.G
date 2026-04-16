@@ -24,7 +24,7 @@ Designed for Patty (exec consumer) to pull updates at any time and get an execut
 - Monthly/weekly trend checks on HLS SQL600 ACR trajectory
 - Renewal window risk assessment (FY26 Q3/Q4 critical window)
 - Modernization pipeline coverage gaps and factory attach rate
-- Industry ranking validation (HLS is #2 in SQL600 — corrects SE&O narrative)
+- Industry ranking validation — report HLS's actual position among SQL600 industries without assuming a prior narrative
 - Identifying GCP leakage risk accounts (no pipeline coverage)
 
 ## Freedom Level
@@ -122,8 +122,9 @@ Based on readout mode from Step 0, execute detail queries from [query-rules.md](
 Assemble the data into the narrative structure defined in [output-template.md](output-template.md). Key synthesis rules:
 
 1. **Lead with the headline number** — ACR LCM + MoM trajectory direction (↑/↓/→)
-2. **Industry ranking** — State HLS position explicitly. If #2+, highlight the "corrected narrative" angle (HLS is NOT a laggard)
-3. **DBC framing** — Frame pipeline and modernization through Database Compete lens
+2. **Industry ranking** — State HLS's actual rank and how it compares to the SQL600 average on pipeline penetration and annualized growth. Report the position neutrally (ahead of / in line with / behind the average). Do NOT inject tone or reuse prior framings ("laggard", "correcting the narrative", "finally outperforming"). Let the numbers carry the message.
+3. **Correlate supporting signals** — When a metric stands out (high/low rank, large WoW move, sharp MoM change, gap-account concentration), look across sections for 1–2 correlated data points that reinforce or complicate the picture (e.g., committed pipe vs. renewal exposure, mod pipeline coverage vs. factory attach, top-account concentration vs. gap accounts). Surface the correlation as an observation, not a causal claim.
+4. **DBC framing** — Frame pipeline and modernization through Database Compete lens
 4. **GCP competitive** — Call out gap accounts (no pipeline) as GCP leakage risk
 5. **Renewal urgency** — Flag Q3/Q4 renewal accounts with SQL Cores and current pipeline coverage
 6. **WoW delta** — Show Realized ACR + Baseline + Pipe week-over-week movement with $ and direction
@@ -155,11 +156,15 @@ When the user says "html report", "dashboard", "rich report", or "exec report":
   "ranking": [{ "Industry": "string", "ACR_LCM": number, "AccountCount": number }],
   "verticals": [{ "Vertical": "string", "AccountCount": number, "ACR_LCM": number, "PipeCommitted": number, "PipeUncommitted": number, "AnnualizedGrowth": number, "ModOpps": number }],
   "trend": [{ "FiscalMonth": "YYYY-MM-DD", "FiscalQuarter": "string", "ACR": number }],
-  "topAccounts": [{ "TopParent": "string", "Vertical": "string", "Segment": "string", "ACR_LCM": number, "PipeCommitted": number|null, "PipeUncommitted": number|null, "AnnualizedGrowth": number, "QualifiedOpps": number|null, "TotalOpps": number|null, "SQLCores": number|null }],
-  "renewals": [{ "TopParent": "string", "Category": "string", "RenewalQuarter": "string|null", "SQLCores": number, "ArcEnabled": "Yes|No", "ACR_LCM": number|null, "PipeCommitted": number|null }],
-  "gapAccounts": [{ "TopParent": "string", "Vertical": "string", "ACR_LCM": number|null, "PipeUncommitted": number|null, "SQLCores": number|null }]
+  "topAccounts": [{ "TopParent": "string", "TPID": number, "Vertical": "string", "Segment": "string", "ACR_LCM": number, "PipeCommitted": number|null, "PipeUncommitted": number|null, "AnnualizedGrowth": number, "QualifiedOpps": number|null, "TotalOpps": number|null, "SQLCores": number|null }],
+  "renewals": [{ "TopParent": "string", "TPID": number, "Category": "string", "RenewalQuarter": "string|null", "SQLCores": number, "ArcEnabled": "Yes|No", "ACR_LCM": number|null, "PipeCommitted": number|null }],
+  "gapAccounts": [{ "TopParent": "string", "TPID": number, "Vertical": "string", "ACR_LCM": number|null, "PipeUncommitted": number|null, "SQLCores": number|null }]
 }
 ```
+
+> **TPID is REQUIRED** on every account-level row in `topAccounts`, `renewals`, and `gapAccounts` — the HTML generator uses TPID to build MSX deep links for each row. The PBI queries (Q5, Q6, Q8) already project `'2) Account'[TPID]`; make sure to preserve it when flattening to JSON.
+
+**Narrative override.** When a markdown readout file matching the date exists at `.copilot/docs/sql600-hls-readout-<date>.md` or `$OBSIDIAN_VAULT_PATH/Daily/SQL600-HLS/sql600-hls-readout-<date>.md`, the generator auto-discovers it and extracts the blockquote narratives under each `##` section (Headline, ACR Trajectory, Vertical Breakdown, Industry Ranking, Top Accounts, Renewal Watch, Modernization, GCP Leakage) plus the Key Takeaways bullet list. These replace the hardcoded prose in the HTML. Pass `--narrative <path>` to override auto-discovery.
 
 ---
 
@@ -169,7 +174,7 @@ When the user says "html report", "dashboard", "rich report", or "exec report":
 |---|---|
 | User asks for "SQL600" without "HLS" qualifier | Check if they mean all SQL600 or HLS specifically. If context suggests HLS (e.g., mentions Patty, DBC, healthcare), proceed with HLS scope. Otherwise ask. |
 | ACR trend is declining MoM | Flag prominently. Include "⚠️ Declining trajectory" in headline. Check if pipeline coverage compensates. |
-| HLS industry rank drops below #2 | Still report accurately but note the delta from prior position. The narrative correction angle remains valid if HLS was previously underreported. |
+| HLS industry rank changes from prior readout | Report the new rank accurately and note the delta from the previous position. Do not editorialize — state the direction and let the reader interpret. |
 | Specific account has zero pipeline and high SQL cores | Tag as "🔴 GCP LEAKAGE RISK" — high SQL footprint with no modernization pipeline = competitive vulnerability. |
 | Renewal in current quarter with no committed pipeline | Tag as "🔴 RENEWAL AT RISK" — immediate action needed. |
 | Factory attach rate is below 15% | Flag as modernization execution gap — factory resources not being leveraged. |

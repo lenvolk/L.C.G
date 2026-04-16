@@ -79,7 +79,7 @@ readout_mode: "<Full|Accounts|Renewal|Modernization|Trend|Ranking|AccountDrill>"
 **<ACR_LCM>** ACR (LCM) · <acr_mom_direction> MoM · **<annualized_growth>** annualized growth since June '25
 **<wow_change>** WoW movement (<wow_direction>) · Pipeline Penetration: **<pipeline_penetration>**
 
-> <one-line DBC narrative — e.g., "HLS continues to outperform the SQL600 average with 76.7% pipeline penetration and $196M annualized growth — correcting the laggard narrative.">
+> <one- or two-line DBC narrative — derive from this readout's actuals. Compare HLS's pipeline penetration and annualized growth to the SQL600 average computed in the Industry Ranking section, then state the factual position neutrally (ahead / in line with / behind). Where the comparison is notable, reinforce it with 1–2 correlated data points from elsewhere in this readout (e.g., ACR MoM/YoY direction, WoW delta, factory attach %, mod pipeline coverage, renewal exposure, gap-account count). Only cite correlations actually supported by the numbers — do not invent causation.>
 
 ---
 
@@ -112,7 +112,7 @@ readout_mode: "<Full|Accounts|Renewal|Modernization|Trend|Ranking|AccountDrill>"
 <for each month in Q4 result:>
 | <MMM yyyy> | <$formatted> |
 
-> <trend narrative — direction, inflection points, trajectory interpretation>
+> <trend narrative — direction, inflection points, trajectory interpretation. Where possible, correlate inflections with supporting signals from other sections (e.g., a jump in committed pipeline, a large renewal closing, mod-opps ramp, top-account expansion). Keep it factual — note the correlation, not a causal claim.>
 
 ---
 
@@ -132,7 +132,7 @@ readout_mode: "<Full|Accounts|Renewal|Modernization|Trend|Ranking|AccountDrill>"
 <for each industry, sorted by ACR DESC:>
 | <rank> | <industry> | <count> | <acr> | <committed> |
 
-> <narrative — HLS position, correction of laggard narrative if applicable>
+> <narrative — derived from the ranking table above. State HLS's rank, the gap (absolute or %) vs. the top industry and vs. the SQL600 average, and whether HLS is ahead/in line/behind. Reinforce with correlated signals where they strengthen or complicate the position (e.g., HLS pipeline penetration vs. ranking peers, committed pipe concentration, mod-opps share, factory attach). No hardcoded framing — recompute from the data each time.>
 
 ---
 

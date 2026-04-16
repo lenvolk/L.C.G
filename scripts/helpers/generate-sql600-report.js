@@ -21,11 +21,13 @@ import { homedir } from 'os';
 const args = process.argv.slice(2);
 let inputFile = null;
 let outputFile = null;
+let narrativeFile = null;
 let noPdf = false;
 let noShare = false;
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--output' && args[i + 1]) { outputFile = args[++i]; continue; }
+  if (args[i] === '--narrative' && args[i + 1]) { narrativeFile = args[++i]; continue; }
   if (args[i] === '--no-pdf') { noPdf = true; continue; }
   if (args[i] === '--no-share') { noShare = true; continue; }
   if (!args[i].startsWith('-')) inputFile = args[i];
@@ -100,6 +102,125 @@ const topAccounts = data.topAccounts || [];
 const renewals = data.renewals || [];
 const gapAccounts = data.gapAccounts || [];
 const generated = data.generated || new Date().toISOString().slice(0, 10);
+
+// ── MSX deep links ───────────────────────────────────────────────────────────
+const MSX_BASE = 'https://microsoftsales.crm.dynamics.com/main.aspx';
+
+// Build a name → TPID fallback map from any row that has one
+const tpidIndex = new Map();
+for (const list of [topAccounts, renewals, gapAccounts]) {
+  for (const row of list || []) {
+    if (row?.TopParent && row?.TPID) {
+      tpidIndex.set(row.TopParent.trim().toLowerCase(), row.TPID);
+    }
+  }
+}
+function resolveTpid(row) {
+  if (row?.TPID) return row.TPID;
+  const key = (row?.TopParent || '').trim().toLowerCase();
+  return tpidIndex.get(key) || null;
+}
+function msxAccountUrl(row) {
+  // Prefer explicit URLs from the data (AccountUrl / msxUrl / recordUrl)
+  if (row?.AccountUrl) return row.AccountUrl;
+  if (row?.msxUrl) return row.msxUrl;
+  if (row?.recordUrl) return row.recordUrl;
+  // GUID → direct record; TPID → quick-find by TPID; name → quick-find by name
+  if (row?.AccountId) return `${MSX_BASE}?etn=account&id=${row.AccountId}&pagetype=entityrecord`;
+  const tpid = resolveTpid(row);
+  if (tpid) return `${MSX_BASE}?pagetype=entitylist&etn=account&viewType=1039&searchText=${tpid}`;
+  if (row?.TopParent) return `${MSX_BASE}?pagetype=entitylist&etn=account&viewType=1039&searchText=${encodeURIComponent(row.TopParent.trim())}`;
+  return null;
+}
+function msxOppUrl(row) {
+  if (row?.OpportunityLink) return row.OpportunityLink;
+  if (row?.OpportunityUrl) return row.OpportunityUrl;
+  if (row?.OpportunityId) return `${MSX_BASE}?etn=opportunity&id=${row.OpportunityId}&pagetype=entityrecord`;
+  return null;
+}
+function acctCell(row, options = {}) {
+  const { maxWidth, showTpid = true } = options;
+  const url = msxAccountUrl(row);
+  const name = row.TopParent || '—';
+  const tpidVal = resolveTpid(row);
+  const tpid = tpidVal ? `<span class="acct-tpid">${tpidVal}</span>` : '';
+  const style = maxWidth ? ` style="max-width:${maxWidth}px"` : '';
+  const inner = url
+    ? `<a class="msx-link" href="${url}" target="_blank" rel="noopener" title="Open in MSX">${name}</a>`
+    : name;
+  return `<td class="acct-name"${style}>${inner}${showTpid && tpid ? ' ' + tpid : ''}</td>`;
+}
+
+// ── Narrative loader (markdown → per-section blockquote text) ───────────────
+function autoDiscoverNarrative(date) {
+  const candidates = [
+    resolve(process.cwd(), '.copilot', 'docs', `sql600-hls-readout-${date}.md`),
+    resolve(homedir(), 'Documents/Obsidian/Jin @ microsoft', 'Daily', 'SQL600-HLS', `sql600-hls-readout-${date}.md`),
+  ];
+  return candidates.find(p => existsSync(p)) || null;
+}
+function parseNarrative(mdPath) {
+  if (!mdPath || !existsSync(mdPath)) return {};
+  const md = readFileSync(mdPath, 'utf8');
+  const sections = {};
+  const headingRe = /^##\s+(.+?)\s*$/gm;
+  const matches = [...md.matchAll(headingRe)];
+  for (let i = 0; i < matches.length; i++) {
+    const rawTitle = matches[i][1].trim();
+    const start = matches[i].index + matches[i][0].length;
+    const end = i + 1 < matches.length ? matches[i + 1].index : md.length;
+    const body = md.slice(start, end);
+
+    // Classify the heading by keyword
+    const key = classifyHeading(rawTitle);
+    if (!key) continue;
+
+    if (key === 'takeaways') {
+      // Capture bullet list
+      const bullets = [...body.matchAll(/^\s*-\s*\[([!*di?>])\]\s+(.+)$/gm)]
+        .map(m => ({ marker: m[1], text: m[2].trim() }));
+      sections[key] = bullets;
+    } else {
+      // Extract first blockquote paragraph (supports multi-line `> ...`)
+      const bqMatch = body.match(/(?:^|\n)((?:^>[^\n]*\n?)+)/m);
+      if (bqMatch) {
+        const quote = bqMatch[1]
+          .split('\n')
+          .map(l => l.replace(/^>\s?/, ''))
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (quote) sections[key] = quote;
+      }
+    }
+  }
+  return sections;
+}
+function classifyHeading(title) {
+  const t = title.toLowerCase();
+  if (t.includes('headline')) return 'headline';
+  if (t.includes('trajectory') || t.includes('trend')) return 'trajectory';
+  if (t.includes('vertical')) return 'vertical';
+  if (t.includes('ranking')) return 'ranking';
+  if (t.includes('top account')) return 'topAccounts';
+  if (t.includes('renewal')) return 'renewal';
+  if (t.includes('modernization')) return 'modernization';
+  if (t.includes('gcp') || t.includes('leakage')) return 'gcp';
+  if (t.includes('takeaway')) return 'takeaways';
+  return null;
+}
+// Lightweight inline markdown → HTML (bold, italic, inline code)
+function mdInline(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[\s(])\*([^*]+)\*(?=[\s).,!?]|$)/g, '$1<em>$2</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+
+const narrativePath = narrativeFile || autoDiscoverNarrative(generated);
+const narrative = parseNarrative(narrativePath);
 
 // Compute derived values
 const trendValues = trend.map(t => parseDollar(t.ACR));
@@ -517,6 +638,20 @@ const html = `<!DOCTYPE html>
   tbody tr:hover { background: rgba(108,92,231,0.06); }
   tbody tr:last-child td { border-bottom: none; }
   .acct-name { font-weight: 600; color: var(--white); max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+  .msx-link { color: var(--white); text-decoration: none; border-bottom: 1px dashed transparent; transition: all 0.15s; }
+  .msx-link:hover { color: var(--accent-light); border-bottom-color: var(--accent-light); }
+  .msx-link::after { content: " ↗"; font-size: 10px; color: var(--text-muted); opacity: 0.6; }
+  .msx-link:hover::after { opacity: 1; color: var(--accent-light); }
+  .acct-tpid { color: var(--text-muted); font-weight: 400; font-size: 11px; font-family: ui-monospace, Menlo, monospace; margin-left: 6px; }
+  .takeaways { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+  .takeaway { display: flex; gap: 12px; padding: 12px 14px; border-radius: var(--radius); background: var(--surface-2); border-left: 3px solid var(--accent); }
+  .takeaway-marker { font-size: 16px; flex-shrink: 0; }
+  .takeaway-text { flex: 1; line-height: 1.55; font-size: 14px; color: var(--text); }
+  .takeaway-important { border-left-color: #ff6b6b; background: rgba(255,107,107,0.08); }
+  .takeaway-highlight { border-left-color: #00b894; background: rgba(0,184,148,0.08); }
+  .takeaway-risk { border-left-color: #ffc048; background: rgba(255,192,72,0.08); }
+  .takeaway-question { border-left-color: #74b9ff; background: rgba(116,185,255,0.08); }
+  .takeaway-info { border-left-color: var(--accent); }
   .tag {
     display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px;
     border-radius: 10px; letter-spacing: 0.3px;
@@ -696,6 +831,11 @@ const html = `<!DOCTYPE html>
     tbody td { color: #222 !important; padding: 6px 8px; border-bottom-color: #eee !important; }
     tbody tr:hover { background: transparent !important; }
     .acct-name { color: #111 !important; }
+    .msx-link { color: #111 !important; }
+    .msx-link::after { display: none; }
+    .acct-tpid { color: #666 !important; }
+    .takeaway { background: #f7f7f7 !important; color: #111 !important; }
+    .takeaway-text { color: #111 !important; }
 
     /* Tags — opaque backgrounds for print */
     .tag-payor { background: #e8f4fd !important; color: #1a6fb5 !important; }
@@ -844,7 +984,9 @@ const html = `<!DOCTYPE html>
 
 <!-- Narrative Callout -->
 <div class="callout">
-  <strong>DBC Narrative:</strong> Healthcare ranks <strong>#${hlsRank}</strong> among SQL600 industries with <strong>${fmtDollar(snapshot.ACR_LCM)}</strong> monthly ACR and <strong>${fmtPct(snapshot.PipelinePenetration)}</strong> pipeline penetration — correcting the prior SE&O narrative that painted HLS as laggards. With <strong>${fmtDollar(snapshot.AnnualizedGrowth)}</strong> in annualized growth and <strong>${fmtNum(snapshot.ModernizationOpps)}</strong> modernization opportunities, HLS is a top-performing DBC vertical. The ${fmtNum(snapshot.AcctsWithoutModPipe)} accounts without modernization pipeline represent <strong>GCP leakage risk</strong> — where HLS customers aren't spending with us, they're spending with GCP.
+  ${narrative.headline
+    ? `<strong>Executive Read:</strong> ${mdInline(narrative.headline)}`
+    : `<strong>DBC Narrative:</strong> Healthcare ranks <strong>#${hlsRank}</strong> among SQL600 industries with <strong>${fmtDollar(snapshot.ACR_LCM)}</strong> monthly ACR and <strong>${fmtPct(snapshot.PipelinePenetration)}</strong> pipeline penetration. With <strong>${fmtDollar(snapshot.AnnualizedGrowth)}</strong> in annualized growth and <strong>${fmtNum(snapshot.ModernizationOpps)}</strong> modernization opportunities, HLS carries <strong>${fmtNum(snapshot.AcctsWithoutModPipe)}</strong> accounts without modernization pipeline — direct <strong>GCP leakage risk</strong>.`}
 </div>
 
 <!-- Hero: ACR Trajectory (full-width) -->
@@ -855,7 +997,9 @@ const html = `<!DOCTYPE html>
   </div>
   <div class="chart-wrap chart-wrap-wide">${trendChartSvg}</div>
   <div class="chart-caption">
-    FY26 realized ACR peaked at <strong>${fmtDollar(Math.max(...trendValues))}</strong> in ${new Date((trend[trendValues.indexOf(Math.max(...trendValues))]?.FiscalMonth || new Date().toISOString().slice(0,10)) + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' })}. <strong>${fmtDollar(parseDollar(snapshot.PipeCommitted) + parseDollar(snapshot.PipeUncommitted))}</strong> in forward pipeline is sitting behind this trajectory — of which only <strong>${fmtPct(parseDollar(snapshot.PipeCommitted) / (parseDollar(snapshot.PipeCommitted) + parseDollar(snapshot.PipeUncommitted)))}</strong> is committed.
+    ${narrative.trajectory
+      ? mdInline(narrative.trajectory)
+      : `FY26 realized ACR peaked at <strong>${fmtDollar(Math.max(...trendValues))}</strong> in ${new Date((trend[trendValues.indexOf(Math.max(...trendValues))]?.FiscalMonth || new Date().toISOString().slice(0,10)) + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' })}. <strong>${fmtDollar(parseDollar(snapshot.PipeCommitted) + parseDollar(snapshot.PipeUncommitted))}</strong> in forward pipeline is sitting behind this trajectory — of which only <strong>${fmtPct(parseDollar(snapshot.PipeCommitted) / (parseDollar(snapshot.PipeCommitted) + parseDollar(snapshot.PipeUncommitted)))}</strong> is committed.`}
   </div>
 </div>
 
@@ -883,6 +1027,7 @@ const html = `<!DOCTYPE html>
         </div>`;
       }).join('\n      ');
     })()}
+    ${narrative.ranking ? `<div class="chart-caption" style="margin-top:16px">${mdInline(narrative.ranking)}</div>` : ''}
   </div>
 
   <!-- Vertical Mix Donut -->
@@ -893,7 +1038,9 @@ const html = `<!DOCTYPE html>
     </div>
     <div class="chart-wrap chart-wrap-donut">${verticalMixSvg}</div>
     <div class="chart-caption">
-      <strong>Health Payor</strong> carries <strong>${payorAcrPct}%</strong> of HLS ACR from <strong>${verticals.find(v => v.Vertical === 'Health Payor')?.AccountCount || 0} accounts</strong> — concentration risk. <strong>Health Provider</strong> is the inverse: <strong>${verticals.find(v => v.Vertical === 'Health Provider')?.AccountCount || 0} accounts</strong> with minimal ACR — largest modernization runway.
+      ${narrative.vertical
+        ? mdInline(narrative.vertical)
+        : `<strong>Health Payor</strong> carries <strong>${payorAcrPct}%</strong> of HLS ACR from <strong>${verticals.find(v => v.Vertical === 'Health Payor')?.AccountCount || 0} accounts</strong> — concentration risk. <strong>Health Provider</strong> is the inverse: <strong>${verticals.find(v => v.Vertical === 'Health Provider')?.AccountCount || 0} accounts</strong> with minimal ACR — largest modernization runway.`}
     </div>
   </div>
 </div>
@@ -906,7 +1053,9 @@ const html = `<!DOCTYPE html>
   </div>
   <div class="chart-wrap chart-wrap-wide">${renewalPressureSvg}</div>
   <div class="chart-caption">
-    <strong>FY26-Q4</strong> is the pressure point — only <strong>${fmtNum(renewalArcCores)} of ${fmtNum(totalRenewalCores)} cores</strong> (${((renewalArcCores / Math.max(totalRenewalCores, 1)) * 100).toFixed(0)}%) are Arc-enabled heading into Q3/Q4 renewals. Non-Arc cores are direct <strong>GCP migration targets</strong>. Accounts with no committed pipe going into renewal represent the highest leakage risk.
+    ${narrative.renewal
+      ? mdInline(narrative.renewal)
+      : `<strong>FY26-Q4</strong> is the pressure point — only <strong>${fmtNum(renewalArcCores)} of ${fmtNum(totalRenewalCores)} cores</strong> (${((renewalArcCores / Math.max(totalRenewalCores, 1)) * 100).toFixed(0)}%) are Arc-enabled heading into Q3/Q4 renewals. Non-Arc cores are direct <strong>GCP migration targets</strong>.`}
   </div>
 </div>
 
@@ -954,7 +1103,6 @@ const html = `<!DOCTYPE html>
         <th>#</th>
         <th>Account</th>
         <th>Vertical</th>
-        <th>Segment</th>
         <th class="right">ACR (LCM)</th>
         <th class="right">Committed</th>
         <th class="right">Uncommitted</th>
@@ -966,9 +1114,11 @@ const html = `<!DOCTYPE html>
     <tbody>
       ${topAccounts.map((a, i) => `<tr>
         <td style="color:var(--text-muted)">${i + 1}</td>
-        <td class="acct-name">${a.TopParent}</td>
-        <td><span class="tag tag-${a.Vertical?.toLowerCase().includes('payor') ? 'payor' : a.Vertical?.toLowerCase().includes('provider') ? 'provider' : a.Vertical?.toLowerCase().includes('pharma') ? 'pharma' : 'medtech'}">${a.Vertical || '—'}</span></td>
-        <td style="font-size:12px;color:var(--text-muted)">${a.Segment || '—'}</td>
+        ${acctCell(a)}
+        <td>
+          <span class="tag tag-${a.Vertical?.toLowerCase().includes('payor') ? 'payor' : a.Vertical?.toLowerCase().includes('provider') ? 'provider' : a.Vertical?.toLowerCase().includes('pharma') ? 'pharma' : 'medtech'}">${a.Vertical || '—'}</span>
+          ${a.Segment ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px">${a.Segment}</div>` : ''}
+        </td>
         <td class="right" style="font-weight:600">${fmtDollar(a.ACR_LCM, false)}</td>
         <td class="right">${fmtDollar(a.PipeCommitted, false)}</td>
         <td class="right">${fmtDollar(a.PipeUncommitted, false)}</td>
@@ -978,6 +1128,7 @@ const html = `<!DOCTYPE html>
       </tr>`).join('\n      ')}
     </tbody>
   </table>
+  ${narrative.topAccounts ? `<div class="chart-caption" style="margin-top:12px">${mdInline(narrative.topAccounts)}</div>` : ''}
 </div>
 
 <!-- Two column: Renewals + Gap -->
@@ -989,7 +1140,9 @@ const html = `<!DOCTYPE html>
       <span class="section-badge badge-red">${renewalQ3 + renewalQ4} Renewals</span>
     </div>
     <div class="callout risk">
-      <strong>${renewalQ4} accounts</strong> renewing in <strong>FY26-Q4</strong> and <strong>${renewalQ3}</strong> in <strong>FY26-Q3</strong>. Only <strong>${arcEnabled}</strong> are Arc-enabled. DB modernization positioning is critical before renewal windows close.
+      ${narrative.renewal
+        ? mdInline(narrative.renewal)
+        : `<strong>${renewalQ4} accounts</strong> renewing in <strong>FY26-Q4</strong> and <strong>${renewalQ3}</strong> in <strong>FY26-Q3</strong>. Only <strong>${arcEnabled}</strong> are Arc-enabled. DB modernization positioning is critical before renewal windows close.`}
     </div>
     <div style="max-height: 400px; overflow-y: auto;">
     <table>
@@ -1010,7 +1163,7 @@ const html = `<!DOCTYPE html>
           if (qa !== qb) return qa.localeCompare(qb);
           return (b.SQLCores || 0) - (a.SQLCores || 0);
         }).map(r => `<tr>
-          <td class="acct-name" style="max-width:160px">${r.TopParent}</td>
+          ${acctCell(r, { maxWidth: 200 })}
           <td><span class="tag tag-${r.Category?.includes('Renewal') ? 'renewal' : r.Category?.includes('Cores') ? 'cores' : 'field'}">${r.Category?.replace('(Excl. renewals)', '').trim() || '—'}</span></td>
           <td><span class="tag tag-renewal">${r.RenewalQuarter || '—'}</span></td>
           <td class="right" style="font-weight:600">${fmtNum(r.SQLCores)}</td>
@@ -1030,7 +1183,9 @@ const html = `<!DOCTYPE html>
       <span class="section-badge badge-red">${gapAccounts.length} Accounts</span>
     </div>
     <div class="callout risk">
-      <strong>${gapAccounts.length} HLS SQL600 accounts</strong> have <strong>zero committed pipeline</strong>. What they aren't spending with us, they're spending with <strong>GCP</strong>. These accounts represent DB modernization opportunities that directly compete with GCP capture.
+      ${narrative.gcp
+        ? mdInline(narrative.gcp)
+        : `<strong>${gapAccounts.length} HLS SQL600 accounts</strong> have <strong>zero committed pipeline</strong>. What they aren't spending with us, they're spending with <strong>GCP</strong>. These accounts represent DB modernization opportunities that directly compete with GCP capture.`}
     </div>
     <div style="max-height: 400px; overflow-y: auto;">
     <table>
@@ -1045,7 +1200,7 @@ const html = `<!DOCTYPE html>
       </thead>
       <tbody>
         ${gapAccounts.sort((a, b) => parseDollar(b.ACR_LCM) - parseDollar(a.ACR_LCM)).map(g => `<tr>
-          <td class="acct-name" style="max-width:180px">${g.TopParent}</td>
+          ${acctCell(g, { maxWidth: 220 })}
           <td><span class="tag tag-${g.Vertical?.toLowerCase().includes('payor') ? 'payor' : g.Vertical?.toLowerCase().includes('provider') ? 'provider' : g.Vertical?.toLowerCase().includes('pharma') ? 'pharma' : 'medtech'}">${g.Vertical || '—'}</span></td>
           <td class="right">${fmtDollar(g.ACR_LCM, false)}</td>
           <td class="right">${fmtDollar(g.PipeUncommitted, false)}</td>
@@ -1057,6 +1212,23 @@ const html = `<!DOCTYPE html>
   </div>
 </div>
 
+${Array.isArray(narrative.takeaways) && narrative.takeaways.length ? `
+<!-- Key Takeaways -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">💡 Key Takeaways</div>
+    <span class="section-badge badge-blue">${narrative.takeaways.length} Insights</span>
+  </div>
+  <ul class="takeaways">
+    ${narrative.takeaways.map(t => {
+      const markerMap = { '!': { cls: 'important', label: 'Important' }, '*': { cls: 'highlight', label: 'Highlight' }, 'd': { cls: 'risk', label: 'Risk' }, '?': { cls: 'question', label: 'Open Question' }, 'i': { cls: 'info', label: 'FYI' }, '>': { cls: 'delegated', label: 'Delegated' } };
+      const m = markerMap[t.marker] || { cls: 'info', label: '' };
+      return `<li class="takeaway takeaway-${m.cls}"><span class="takeaway-marker" title="${m.label}">${t.marker === '!' ? '❗' : t.marker === '*' ? '⭐' : t.marker === 'd' ? '📉' : t.marker === '?' ? '❓' : t.marker === 'i' ? 'ℹ️' : '→'}</span><span class="takeaway-text">${mdInline(t.text)}</span></li>`;
+    }).join('\n    ')}
+  </ul>
+</div>
+` : ''}
+
 </div><!-- /container -->
 
 <div class="footer">
@@ -1066,7 +1238,7 @@ const html = `<!DOCTYPE html>
 
 <!-- Easter Egg -->
 <div class="easter-egg" id="egg" onclick="this.classList.remove('show')">
-  🏥 Healthcare isn't a laggard — it's #${hlsRank}. The data doesn't lie. 💜
+  🏥 HLS #${hlsRank} of ${ranking.filter(r => r.Industry).length} · ${fmtDollar(snapshot.ACR_LCM)} ACR · ${fmtPct(snapshot.PipelinePenetration)} penetration 💜
 </div>
 <script>
   // Export PDF
@@ -1157,5 +1329,6 @@ console.log(JSON.stringify({
   pdf: pdfRendered ? pdfPath : null,
   oneDrive: oneDriveSynced,
   generated,
-  accounts: topAccounts.length
+  accounts: topAccounts.length,
+  narrative: narrativePath ? { source: narrativePath, sections: Object.keys(narrative) } : null
 }, null, 2));
