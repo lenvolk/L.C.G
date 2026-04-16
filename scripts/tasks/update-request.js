@@ -17,8 +17,8 @@ function slugify(str) {
 
 export default {
   name: "update-request",
-  prompt: "update-request.prompt.md",
-  repairPrompt: "update-request-repair.prompt.md",
+  prompt: "deal-update-request.prompt.md",
+  repairPrompt: "deal-update-request-repair.prompt.md",
   skipWeekends: false,
   maxRepairAttempts: 1,
 
@@ -44,7 +44,7 @@ export default {
       /^- Date: .+/m,
       /^- Customer Slug: .+/m,
       /^- Draft Count: [0-9]+/m,
-      /^- Quality Bar: Kate edits <=2 sentences per draft$/m,
+      /^- Quality Bar: L.C.G edits <=2 sentences per draft$/m,
       /^- To:.*$/m,
       /^- Subject: .*Update Request - .+/m,
       /^- Body:/m,

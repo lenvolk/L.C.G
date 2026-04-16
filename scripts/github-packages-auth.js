@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+// Suppress DEP0190 — all shell args are program-controlled, not user input.
+process.removeAllListeners("warning");
+const _origEmit = process.emit;
+process.emit = function (name, data) {
+  if (name === "warning" && data?.name === "DeprecationWarning" && data?.code === "DEP0190") return false;
+  return _origEmit.apply(process, arguments);
+};
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -12,14 +19,15 @@ export const NPMRC_PATH = resolve(homedir(), ".npmrc");
 
 const HOST = "github.com";
 const REGISTRY = "https://npm.pkg.github.com";
-const MANAGED_START = "# >>> mcaps-iq github-packages auth >>>";
-const MANAGED_END = "# <<< mcaps-iq github-packages auth <<<";
+const MANAGED_START = "# >>> L.C.G github-packages auth >>>";
+const MANAGED_END = "# <<< L.C.G github-packages auth <<<";
+const NPMJS = "https://registry.npmjs.org";
 const PRIVATE_PACKAGES = [
   { name: "@microsoft/msx-mcp-server", registry: REGISTRY },
+  { name: "@jinlee794/obsidian-intelligence-layer", registry: REGISTRY },
 ];
 const PUBLIC_PACKAGES = [
-  { name: "@microsoft/workiq", registry: "https://registry.npmjs.org" },
-  { name: "@jinlee794/obsidian-intelligence-layer", registry: REGISTRY },
+  { name: "@microsoft/workiq", registry: NPMJS },
 ];
 
 function run(command, args, options = {}) {
@@ -27,6 +35,8 @@ function run(command, args, options = {}) {
     cwd: ROOT,
     encoding: "utf-8",
     stdio: ["pipe", "pipe", "pipe"],
+    // On Windows, npm/npx are .cmd batch files that require a shell to execute.
+    shell: process.platform === "win32",
     ...options,
   }).trim();
 }
@@ -189,7 +199,7 @@ async function promptAccountChoice(accounts) {
 function buildManagedBlock(token, account) {
   return [
     MANAGED_START,
-    `# Managed by MCAPS IQ for GitHub account: ${account}`,
+    `# Managed by L.C.G for GitHub account: ${account}`,
     `//npm.pkg.github.com/:_authToken=${token}`,
     MANAGED_END,
   ].join("\n");
@@ -199,10 +209,17 @@ function upsertManagedBlock(filePath, block) {
   let current = existsSync(filePath) ? readFileSync(filePath, "utf-8") : "";
   // Remove blanket @microsoft scope routing — it breaks public @microsoft packages
   current = current.replace(/^@microsoft:registry=https:\/\/npm\.pkg\.github\.com\n?/gm, "");
+  // Remove our existing managed block
   const pattern = new RegExp(`${MANAGED_START}[\\s\\S]*?${MANAGED_END}\\n?`, "m");
-  const next = pattern.test(current)
-    ? current.replace(pattern, `${block}\n`)
-    : `${current.replace(/\s*$/, "")}${current.trim() ? "\n\n" : ""}${block}\n`;
+  current = current.replace(pattern, "");
+  // Remove other tools' managed blocks for the same registry (e.g. mcaps-iq)
+  // to prevent stale token conflicts — only one authToken per registry should exist
+  current = current.replace(/^# >>> .+ github-packages auth >>>[\s\S]*?# <<< .+ github-packages auth <<<\n?/gm, "");
+  // Remove any bare //npm.pkg.github.com/:_authToken lines (stale PATs from manual edits)
+  current = current.replace(/^\/\/npm\.pkg\.github\.com\/:_authToken=.+\n?/gm, "");
+  // Collapse excessive blank lines left by removals
+  current = current.replace(/\n{3,}/g, "\n\n");
+  const next = `${current.replace(/\s*$/, "")}${current.trim() ? "\n\n" : ""}${block}\n`;
   writeFileSync(filePath, next, "utf-8");
 }
 
@@ -237,11 +254,11 @@ async function loginForPackages(accounts) {
       // Switch to selected account, then refresh to add read:packages scope
       const user = accounts[idx].user;
       process.stdout.write(`[auth:packages] Switching to ${user} and refreshing token with read:packages scope…\n`);
-      spawnSync("gh", ["auth", "switch", "--hostname", HOST, "--user", user], { cwd: ROOT, stdio: "inherit" });
+      spawnSync("gh", ["auth", "switch", "--hostname", HOST, "--user", user], { cwd: ROOT, stdio: "inherit", shell: process.platform === "win32" });
       const result = spawnSync(
         "gh",
         ["auth", "refresh", "--hostname", HOST, "--scopes", "read:packages"],
-        { cwd: ROOT, stdio: "inherit" },
+        { cwd: ROOT, stdio: "inherit", shell: process.platform === "win32" },
       );
       if (result.error || result.status !== 0) {
         throw new Error(`Token refresh failed for ${user}. Run 'gh auth switch --user ${user} && gh auth refresh --scopes read:packages' manually.`);
@@ -255,7 +272,7 @@ async function loginForPackages(accounts) {
   const result = spawnSync(
     "gh",
     ["auth", "login", "--hostname", HOST, "--web", "--scopes", "read:packages"],
-    { cwd: ROOT, stdio: "inherit" },
+    { cwd: ROOT, stdio: "inherit", shell: process.platform === "win32" },
   );
 
   if (result.error || result.status !== 0) {
@@ -265,7 +282,16 @@ async function loginForPackages(accounts) {
 
 function checkPackageReachable(packageName, registry) {
   try {
-    const version = run("npm", ["view", `${packageName}@latest`, "version", "--registry", registry]);
+    // npm ignores --registry for scoped packages when a scope-level registry
+    // is set in .npmrc. Use a scope-level config flag to truly override it.
+    const scope = packageName.startsWith("@") ? packageName.split("/")[0] : null;
+    const args = ["view", `${packageName}@latest`, "version"];
+    if (scope) {
+      args.push(`--${scope}:registry=${registry}`);
+    } else {
+      args.push("--registry", registry);
+    }
+    const version = run("npm", args);
     return { reachable: true, version };
   } catch {
     return { reachable: false };
@@ -359,6 +385,7 @@ export async function ensureGithubPackagesAuth(options = {}) {
 
   const stillFailing = retryResults.filter((r) => !r.reachable);
   if (stillFailing.length > 0) {
+    const hasMicrosoftPkg = stillFailing.some((r) => r.name.startsWith("@microsoft/"));
     process.stderr.write(`\n[auth:packages] ${stillFailing.length} package(s) still unreachable after auth.\n`);
     for (const r of stillFailing) {
       if (PRIVATE_PACKAGES.some((p) => p.name === r.name)) {
@@ -367,9 +394,23 @@ export async function ensureGithubPackagesAuth(options = {}) {
         process.stderr.write(`  → ${r.name}: Check the package name/registry or network connectivity.\n`);
       }
     }
+    if (hasMicrosoftPkg) {
+      process.stderr.write("\n");
+      process.stderr.write("  \x1b[1m\x1b[33m┌──────────────────────────────────────────────────────────┐\x1b[0m\n");
+      process.stderr.write("  \x1b[1m\x1b[33m│  If the @microsoft org uses SAML SSO, your token needs   │\x1b[0m\n");
+      process.stderr.write("  \x1b[1m\x1b[33m│  SSO authorization. Try:                                 │\x1b[0m\n");
+      process.stderr.write("  \x1b[1m\x1b[33m│                                                          │\x1b[0m\n");
+      process.stderr.write("  \x1b[1m\x1b[33m│  1. Open https://github.com/settings/tokens              │\x1b[0m\n");
+      process.stderr.write("  \x1b[1m\x1b[33m│  2. Click \"Configure SSO\" next to your active token       │\x1b[0m\n");
+      process.stderr.write("  \x1b[1m\x1b[33m│  3. Authorize for the \"microsoft\" organization            │\x1b[0m\n");
+      process.stderr.write("  \x1b[1m\x1b[33m│                                                          │\x1b[0m\n");
+      process.stderr.write("  \x1b[1m\x1b[33m│  Or create a classic PAT with read:packages + SSO:        │\x1b[0m\n");
+      process.stderr.write("  \x1b[1m\x1b[33m│    https://github.com/settings/tokens/new                │\x1b[0m\n");
+      process.stderr.write("  \x1b[1m\x1b[33m└──────────────────────────────────────────────────────────┘\x1b[0m\n");
+    }
     process.stderr.write("\n");
     process.stderr.write("  \x1b[1m\x1b[36m┌──────────────────────────────────────────────────────────┐\x1b[0m\n");
-    process.stderr.write("  \x1b[1m\x1b[36m│  Still stuck? Open Copilot Chat (Cmd+Shift+I) and ask:  │\x1b[0m\n");
+    process.stderr.write("  \x1b[1m\x1b[36m│  Still stuck? Open Copilot Chat (Ctrl+Shift+I) and ask: │\x1b[0m\n");
     process.stderr.write("  \x1b[1m\x1b[36m│                                                          │\x1b[0m\n");
     process.stderr.write("  \x1b[1m\x1b[36m│    \"Help me debug my MCP package auth setup\"             │\x1b[0m\n");
     process.stderr.write("  \x1b[1m\x1b[36m│                                                          │\x1b[0m\n");
@@ -389,12 +430,14 @@ function isDirectRun() {
 }
 
 if (isDirectRun()) {
-  try {
-    await ensureGithubPackagesAuth({
-      checkOnly: process.argv.includes("--check"),
-    });
-  } catch (error) {
-    process.stderr.write(`[auth:packages] ${error.message}\n`);
-    process.exit(1);
-  }
+  (async () => {
+    try {
+      await ensureGithubPackagesAuth({
+        checkOnly: process.argv.includes("--check"),
+      });
+    } catch (error) {
+      process.stderr.write(`[auth:packages] ${error.message}\n`);
+      process.exit(1);
+    }
+  })();
 }

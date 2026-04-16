@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Kate Task Runner CLI
+ * L.C.G Task Runner CLI
  *
- * Unified entry point for all Kate automations.
+ * Unified entry point for all L.C.G automations.
  *
  * Usage:
  *   node scripts/run.js <task>       [options]

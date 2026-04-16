@@ -8,7 +8,7 @@ import { existsSync } from "node:fs";
 
 export default {
   name: "milestone-review",
-  prompt: "crm-milestone-review.prompt.md",
+  prompt: "deal-milestone-review.prompt.md",
   repairPrompt: null, // uses inline retry — output file existence is the gate
   skipWeekends: false, // has its own day-of-week check
   maxRepairAttempts: 1,

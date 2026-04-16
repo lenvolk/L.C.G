@@ -39,7 +39,7 @@ export default {
       "## Why This Matters",
       "## What Changed Since Last Touchpoint",
       "## Key Attendee Context",
-      "## Open Items and Milestone Status",
+      "## Opportunity Status & Key Actions",
       "## Risks and Decision Points",
       "## Prep Checklist",
       "## Recommended Talk Track",

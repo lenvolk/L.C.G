@@ -7,8 +7,8 @@ import { join } from "node:path";
 
 export default {
   name: "learning-review",
-  prompt: "learning-review.prompt.md",
-  repairPrompt: "learning-review-repair.prompt.md",
+  prompt: "triage-learning-review.prompt.md",
+  repairPrompt: "triage-learning-review-repair.prompt.md",
   skipWeekends: false,
   maxRepairAttempts: 1,
 

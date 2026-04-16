@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Cross-platform environment initializer for mcaps-iq.
+ * Cross-platform environment initializer for L.C.G
  *
  * Usage:
  *   node scripts/init.js          # optional local tooling setup + environment bootstrap
@@ -17,7 +17,16 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline";
+import { cpSync } from "node:fs";
 import { ensureGithubPackagesAuth } from "./github-packages-auth.js";
+import {
+  scaffoldVault,
+  seedStarter,
+  syncSidekick,
+  syncStarterConfigs,
+  checkConfigIntegrity,
+} from "./setup-vault.js";
+import { resolveVaultRoot } from "./lib/secure-path.js";
 
 // ── repo root (scripts/ lives one level below) ──────────────────────
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -73,6 +82,9 @@ function ok(msg) {
 }
 function warn(msg) {
   console.log(`  ⚠ ${msg}`);
+}
+function info(msg) {
+  console.log(`  → ${msg}`);
 }
 function fail(msg) {
   console.log(`  ✖ ${msg}`);
@@ -211,7 +223,16 @@ function printAliasFallback() {
 }
 
 function registerAlias() {
-  heading("Registering 'mcaps' CLI alias");
+  console.log();
+  console.log("  \x1b[1m\x1b[36m╔══════════════════════════════════════════════════════════╗\x1b[0m");
+  console.log("  \x1b[1m\x1b[36m║                                                          ║\x1b[0m");
+  console.log("  \x1b[1m\x1b[36m║   Installing the 'mcaps' CLI binary globally              ║\x1b[0m");
+  console.log("  \x1b[1m\x1b[36m║                                                          ║\x1b[0m");
+  console.log("  \x1b[1m\x1b[36m║   This registers bin/mcaps.js as a global command so      ║\x1b[0m");
+  console.log("  \x1b[1m\x1b[36m║   you can run 'mcaps' from any terminal, anywhere.        ║\x1b[0m");
+  console.log("  \x1b[1m\x1b[36m║                                                          ║\x1b[0m");
+  console.log("  \x1b[1m\x1b[36m╚══════════════════════════════════════════════════════════╝\x1b[0m");
+  console.log();
 
   // Ensure bin script is executable on Unix
   if (!isWindows) {
@@ -221,7 +242,7 @@ function registerAlias() {
     } catch { /* best-effort */ }
   }
 
-  // Check if mcaps is already linked and working
+  // Check if 'mcaps' is already linked and working
   const whichCmd = isWindows ? "where mcaps" : "which mcaps";
   const existing = tryRun(whichCmd);
 
@@ -235,7 +256,7 @@ function registerAlias() {
       shell: isWindows ? true : "/bin/sh",
     });
   } catch {
-    // If link failed but mcaps already exists and works, that's fine
+    // If link failed but 'mcaps' already exists and works, that's fine
     if (existing) {
       ok("'mcaps' is already registered globally — no changes needed.");
       return true;
@@ -316,24 +337,40 @@ async function configureEnv() {
 
   // Skip prompt in non-interactive environments (CI, piped stdin)
   if (!process.stdin.isTTY) {
-    warn("Non-interactive shell — skipping vault path prompt.");
-    warn("Set OBSIDIAN_VAULT_PATH in .env manually for the OIL MCP server.");
+    const localVault = join(ROOT, ".vault");
+    const starterDir = join(ROOT, "vault-starter");
+    if (!existsSync(localVault) && existsSync(starterDir)) {
+      info("Non-interactive shell — initializing local vault from vault-starter/...");
+      cpSync(starterDir, localVault, { recursive: true });
+    }
+    const envLine = `OBSIDIAN_VAULT_PATH=${localVault}\n`;
+    const content = existsSync(envPath) ? readFileSync(envPath, "utf-8") : "";
+    writeFileSync(envPath, content + envLine, "utf-8");
+    ok(`Vault path set to local .vault/ directory`);
     return;
   }
 
   heading("Obsidian Vault Configuration");
   console.log("  The OIL MCP server needs the path to your Obsidian vault.");
-  console.log("  This is stored in .env (gitignored) — not committed.\n");
+  console.log("  This is stored in .env (gitignored) — not committed.");
+  console.log("  Press Enter to use a local vault inside the repo (.vault/).\n");
 
-  const vaultPath = await ask("  Obsidian vault path (or press Enter to skip): ");
+  const vaultInput = await ask("  Obsidian vault path (Enter = local .vault/): ");
+  const localVault = join(ROOT, ".vault");
+  const vaultPath = vaultInput || localVault;
 
-  if (!vaultPath) {
-    warn("Skipped — OIL server won't start without a vault path.");
-    warn("You can set it later:  echo 'OBSIDIAN_VAULT_PATH=/your/path' >> .env");
-    return;
-  }
-
-  if (!existsSync(vaultPath)) {
+  if (!vaultInput) {
+    // Scaffold local vault from vault-starter/ if it doesn't exist yet
+    const starterDir = join(ROOT, "vault-starter");
+    if (!existsSync(localVault) && existsSync(starterDir)) {
+      info("Initializing local vault from vault-starter/...");
+      cpSync(starterDir, localVault, { recursive: true });
+      ok(`Local vault created at ${localVault}`);
+    } else if (existsSync(localVault)) {
+      ok(`Local vault already exists at ${localVault}`);
+    }
+    info("You can point this to an Obsidian vault later by editing .env");
+  } else if (!existsSync(vaultPath)) {
     warn(`Path does not exist yet: ${vaultPath}`);
     warn("Saving anyway — make sure the vault is created before starting OIL.");
   }
@@ -343,6 +380,77 @@ async function configureEnv() {
   const content = existsSync(envPath) ? readFileSync(envPath, "utf-8") : "";
   writeFileSync(envPath, content + envLine, "utf-8");
   ok(`Saved to .env: OBSIDIAN_VAULT_PATH=${vaultPath}`);
+}
+
+// ── vault sync ──────────────────────────────────────────────────────
+function runVaultSync() {
+  heading("Vault scaffold & sync");
+
+  // Resolve vault path from .env (just written by configureEnv)
+  const envPath = join(ROOT, ".env");
+  let vaultPath = null;
+  if (existsSync(envPath)) {
+    const content = readFileSync(envPath, "utf-8");
+    const match = content.match(/^OBSIDIAN_VAULT_PATH\s*=\s*(.+)$/m);
+    if (match) vaultPath = match[1].trim().replace(/^["']|["']$/g, "");
+  }
+  if (!vaultPath) {
+    const localVault = join(ROOT, ".vault");
+    if (existsSync(localVault)) vaultPath = localVault;
+  }
+
+  if (!vaultPath) {
+    warn("No vault path configured — skipping vault sync.");
+    warn("Run 'npm run vault:sync' after setting OBSIDIAN_VAULT_PATH in .env");
+    return;
+  }
+
+  let resolved;
+  try {
+    resolved = resolveVaultRoot(vaultPath);
+  } catch (err) {
+    warn(`Vault path rejected: ${err.message}`);
+    warn("Run 'npm run vault:sync' manually after fixing the path.");
+    return;
+  }
+
+  // Scaffold base folders
+  const { created } = scaffoldVault(resolved);
+  if (created.length > 0) {
+    ok(`Created ${created.length} vault folder(s).`);
+  } else {
+    ok("All vault folders already exist.");
+  }
+
+  // Seed starter files
+  const { seeded } = seedStarter(resolved);
+  if (seeded.length > 0) {
+    ok(`Seeded ${seeded.length} starter file(s).`);
+  } else {
+    ok("All starter files already present.");
+  }
+
+  // Sync sidekick
+  const { copied } = syncSidekick(resolved);
+  if (copied.length > 0) {
+    ok(`Synced ${copied.length} sidekick file(s).`);
+  } else {
+    ok("Sidekick is up to date.");
+  }
+
+  // Sync _lcg/ and Dashboard/ configs
+  const { copied: cfgCopied } = syncStarterConfigs(resolved);
+  if (cfgCopied.length > 0) {
+    ok(`Synced ${cfgCopied.length} config file(s).`);
+  } else {
+    ok("Configs are up to date.");
+  }
+
+  // Integrity check
+  const unauthorized = checkConfigIntegrity(resolved);
+  if (unauthorized.length > 0) {
+    warn(`${unauthorized.length} unauthorized file(s) in _lcg/ — run 'npm run vault:hygiene'`);
+  }
 }
 
 // ── main ────────────────────────────────────────────────────────────
@@ -371,6 +479,14 @@ if (checkMode) {
     • All AI-generated outputs are drafts requiring human judgment.
     • Write operations require your explicit confirmation before executing.
     • You will not rely on AI outputs without independent verification.
+
+  \x1b[1m\x1b[31m⛔ MCP SERVER SECURITY\x1b[0m
+    • NEVER add MCP servers you found on the internet, blogs, or Discord.
+    • NEVER paste MCP configs someone shared outside the v-team.
+    • MCP servers run with YOUR credentials and can access your email,
+      calendar, CRM, and Teams. A malicious server = full data breach.
+    • Only use the approved servers in .vscode/mcp.json.
+    • See README.md "MCP Security" section for the full policy.
 `);
 
   if (process.stdin.isTTY) {
@@ -397,28 +513,35 @@ if (checkMode) {
     }
 
     await configureEnv();
+    runVaultSync();
     const aliasOk = registerAlias();
     heading("All done ✔");
 
-    // Prominent mcaps alias banner
     if (aliasOk) {
-      console.log(`
-  ┌─────────────────────────────────────────────────────────────┐
-  │                                                             │
-  │   ★  The 'mcaps' command is now available globally.         │
-  │                                                             │
-  │   Open any terminal, from any directory, and type:          │
-  │                                                             │
-  │       mcaps                                                 │
-  │                                                             │
-  │   This launches Copilot CLI with all MCAPS IQ servers,      │
-  │   agents, and skills loaded — no need to cd into the repo.  │
-  │                                                             │
-  │   Requires: Copilot CLI (brew install copilot-cli)          │
-  │   Fallback: opens VS Code if Copilot CLI isn't installed.   │
-  │                                                             │
-  └─────────────────────────────────────────────────────────────┘
-`);
+      console.log();
+      console.log("  \x1b[1m\x1b[32m┌─────────────────────────────────────────────────────────────┐\x1b[0m");
+      console.log("  \x1b[1m\x1b[32m│                                                             │\x1b[0m");
+      console.log("  \x1b[1m\x1b[32m│   ★  'mcaps' CLI installed successfully!                    │\x1b[0m");
+      console.log("  \x1b[1m\x1b[32m│                                                             │\x1b[0m");
+      console.log("  \x1b[1m\x1b[32m│   Run from any terminal, any directory:                     │\x1b[0m");
+      console.log("  \x1b[1m\x1b[32m│                                                             │\x1b[0m");
+      console.log("  \x1b[1m\x1b[33m│       'mcaps'                                                 │\x1b[0m");
+      console.log("  \x1b[1m\x1b[33m│       'mcaps' -p \"morning triage\"                             │\x1b[0m");
+      console.log("  \x1b[1m\x1b[32m│                                                             │\x1b[0m");
+      console.log("  \x1b[1m\x1b[32m│   Launches Copilot CLI with all L.C.G servers,          │\x1b[0m");
+      console.log("  \x1b[1m\x1b[32m│   agents, and skills — no need to cd into the repo.        │\x1b[0m");
+      console.log("  \x1b[1m\x1b[32m│                                                             │\x1b[0m");
+      console.log("  \x1b[1m\x1b[32m└─────────────────────────────────────────────────────────────┘\x1b[0m");
+      console.log();
+    } else {
+      console.log();
+      console.log("  \x1b[1m\x1b[33m┌─────────────────────────────────────────────────────────────┐\x1b[0m");
+      console.log("  \x1b[1m\x1b[33m│                                                             │\x1b[0m");
+      console.log("  \x1b[1m\x1b[33m│   ⚠  'mcaps' CLI was NOT installed globally.                │\x1b[0m");
+      console.log("  \x1b[1m\x1b[33m│   See the instructions above to register it manually.      │\x1b[0m");
+      console.log("  \x1b[1m\x1b[33m│                                                             │\x1b[0m");
+      console.log("  \x1b[1m\x1b[33m└─────────────────────────────────────────────────────────────┘\x1b[0m");
+      console.log();
     }
 
     // Check if already signed in to provide the right next step

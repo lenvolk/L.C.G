@@ -7,9 +7,9 @@ import { join } from "node:path";
 
 export default {
   name: "morning-triage",
-  prompt: "morning-triage.prompt.md",
-  promptFallback: "morning-prep.prompt.md",
-  repairPrompt: "morning-triage-repair.prompt.md",
+  prompt: "triage-morning.prompt.md",
+  promptFallback: null,
+  repairPrompt: "triage-morning-repair.prompt.md",
   skipWeekends: true,
   maxRepairAttempts: 1,
 
@@ -26,15 +26,13 @@ export default {
       "### URGENT",
       "### HIGH",
       "### MEETING PREP STATUS",
-      "### MILESTONE ALERTS",
+      "### PIPELINE ALERTS",
       "### ACTION QUEUE",
       "### FYI",
       "### RUN METADATA",
     ],
     sectionCountPattern:
-      /^- Section counts: URGENT=\d+; HIGH=\d+; MEETING PREP STATUS=\d+; MILESTONE ALERTS=\d+; ACTION QUEUE=\d+; FYI=\d+$/m,
-    conflictSummaryPattern:
-      /^- Conflict summary: overlap_groups=\d+; conflict_decisions=\d+; unresolved_conflicts=\d+$/m,
+      /^- Section counts: URGENT=\d+; HIGH=\d+; MEETING PREP STATUS=\d+; PIPELINE ALERTS=\d+; ACTION QUEUE=\d+; FYI=\d+$/m,
     assumptionCount: 3,
   },
 
