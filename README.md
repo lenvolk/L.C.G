@@ -94,34 +94,7 @@ Open any terminal and type `lcg` to start an interactive session.
 
 ---
 
-## Architecture Overview
-
-### Identity & Value Proposition
-![L.C.G. — Hero Banner](image/README/lcg-01-hero.png)
-
-### Three-Layer Architecture
-![Three-Layer Architecture — Instructions, MCP Servers, Second Brain](image/README/lcg-02-architecture.png)
-
-### Agent Architecture
-![Two-Agent Architecture — Chief of Staff delegates to m365-actions](image/README/lcg-03-agents.png)
-
-### Workflow Lanes
-![Workflow Lanes — Daily, Weekly, On-Demand, Self-Repair](image/README/lcg-04-workflows.png)
-
-### Config Gate & Trust Model
-![Config Gate and Trust Model — vault-config-gate + human-in-the-loop](image/README/lcg-05-config-gate.png)
-![Trust Model — Read-only default, staged CRM writes](image/README/lcg-06-trust.png)
-
-### Connected Systems & Skills
-![Connected Systems via MCP](image/README/lcg-07-sources.png)
-![Skill Map — 34 domain skills by category](image/README/lcg-08-skills.png)
-![Callouts — Plain English, Local-First, Multi-Signal, Self-Correcting](image/README/lcg-09-callouts.png)
-
-> **Full interactive version:** After cloning, run `open assets/lcg-overview-diagram.html` (macOS) or `start assets/lcg-overview-diagram.html` (Windows) to view the full diagram in your browser.
-
----
-
-## The Grind is Real
+## Why L.C.G. Exists
 
 You already know the pain:
 
@@ -131,209 +104,186 @@ You already know the pain:
 - **Institutional memory** — trapped in your head, not in a system
 - **Follow-ups everywhere** — scattered across email, CRM, Teams, and sticky notes
 
-No single tool today gives you deep M365/CRM integration, persistent personalization, *and* trust-appropriate automation where you still own every final call. So you grind. Every. Single. Day.
+No single tool today reads across your M365 + CRM stack, remembers *your* priorities, and still lets you own every final call. So you grind. Every. Single. Day.
+
+L.C.G. turns GitHub Copilot into the tireless junior staffer you always wanted — one that **pre-reads, pre-researches, and pre-drafts everything** so you can focus on judgment, relationships, and the work that actually needs a human.
 
 ---
 
-## Let Copilot Grind Instead
+## What You Get — Day One
 
-L.C.G. turns GitHub Copilot into the tireless junior staffer you always wanted — one that **pre-processes, pre-researches, and pre-drafts everything** so you can focus on judgment, relationships, and the work that actually requires a human.
+Just type a command in Copilot Chat. No menus, no screens, no training required.
 
-### The Three-Layer Architecture
+### ☀️ Every Morning
 
-```
-                      YOU (natural language)
-                              |
-                              v
- +--------------------------------------------------------------+
- |                                                              |
- |  LAYER 1 -- Natural Language Instructions                    |
- |                                                              |
- |    .instructions.md   .prompt.md   agents   skills           |
- |    "What to do and how to think about it"                    |
- |                                                              |
- +--------------------------------------------------------------+
- |                                                              |
- |  LAYER 2 -- MCP Servers (Data Bridge & Actions)              |
- |                                                              |
- |    +------+ +-----+ +-------+ +-----+ +-----+ +---------+    |
- |    | Mail | | Cal | | Teams | | CRM | | PBI | | Vault   |    |
- |    +------+ +-----+ +-------+ +-----+ +-----+ +---------+    |
- |                                                              |
- |    "How to read data and take action"                        |
- |                                                              |
- +--------------------------------------------------------------+
- |                                                              |
- |  LAYER 3 -- Second Brain (Obsidian Vault)                    |
- |                                                              |
- |    Preferences  Patterns  History  Templates  Learning Log   |
- |    "What the system knows and remembers"                     |
- |                                                              |
- +--------------------------------------------------------------+
-```
+| Say this…                | …and get this                                                  |
+| ------------------------ | -------------------------------------------------------------- |
+| `/morning-triage`      | Prioritized daily brief: what's urgent, what can wait, who's waiting on you |
+| `/meeting-brief`       | One-page prep for your next meeting — context, attendees, open items, risks |
+| `/meeting-followup`    | Action items and next steps written for you after a meeting ends |
+| `/update-request`      | Polished follow-up emails to customers who owe you an answer   |
 
-| Layer                           | What it does                                                | Why it matters                                                             |
-| ------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------- |
-| **Instructions & Skills** | Plain-English markdown files that define behavior           | Anyone can read, edit, and version them — zero code required              |
-| **MCP Servers**           | Connect Copilot to live data (email, CRM, calendar, vault)  | One prompt, 12 systems queried — Copilot does the legwork                 |
-| **Second Brain**          | Local Obsidian vault acts as an L1 cache of durable context | The system remembers so you don't have to — gets smarter every cycle     |
+### 📆 Every Week
+
+| Say this…                | …and get this                                       |
+| ------------------------ | --------------------------------------------------- |
+| `/weekly-rob`          | Your rhythm-of-business summary, ready to send      |
+| `/winning-wednesdays`  | Win-Room highlights condensed to what matters       |
+| `/win-wire-digest`     | Big-deal recaps compiled for your team              |
+| `/stu-highlights`      | Channel highlights you'd otherwise miss             |
+
+### 🎯 On Demand
+
+| Say this…                | …and get this                                                         |
+| ------------------------ | --------------------------------------------------------------------- |
+| "Review this opportunity" | Full deal deep-dive with recent signals, risks, and recommended next steps |
+| "Run pipeline hygiene"   | Stale deals, missing fields, close-date drift — ranked by severity   |
+| "Prep me for my 1:1"     | Seller's pipeline, recent movement, coaching opportunities            |
+| "Build a deck on…"        | PowerPoint draft pulled from your vault + CRM data                    |
+
+> **34+ skills** are bundled in. You never need to memorize names — just describe the outcome you want.
 
 ---
 
-## Agents
+## How It Works (in plain English)
 
-L.C.G. uses a **two-agent architecture** — you think, Copilot grinds:
+L.C.G. runs on three simple layers. You only ever interact with the first one.
 
+```mermaid
+flowchart TB
+  U["👤 YOU — type what you want in plain English"] --> L1
+
+  subgraph L1["🧠 1. Instructions — how L.C.G. thinks"]
+    direction LR
+    I1["Your preferences"] --- I2["VIP list"] --- I3["Operating rhythm"] --- I4["Skills library"]
+  end
+
+  L1 --> L2
+
+  subgraph L2["🔌 2. Live Data — what L.C.G. reads"]
+    direction LR
+    D1["📧 Outlook"] --- D2["📅 Calendar"] --- D3["💬 Teams"] --- D4["📊 CRM (MSX)"] --- D5["📈 Power BI"] --- D6["📁 SharePoint"]
+  end
+
+  L2 --> L3
+
+  subgraph L3["💾 3. Second Brain — what L.C.G. remembers"]
+    direction LR
+    M1["Customer notes"] --- M2["Meeting history"] --- M3["Drafted emails"] --- M4["Learning log"]
+  end
+
+  style U fill:#0d1117,stroke:#58a6ff,stroke-width:2px,color:#e6edf3
+  style L1 fill:#1a1a2e,stroke:#4cc9f0,color:#e0e0e0
+  style L2 fill:#1b4332,stroke:#52b788,color:#e0e0e0
+  style L3 fill:#3a0ca3,stroke:#c77dff,color:#e0e0e0
 ```
- +-------------------------------------------------------------+
- |                                                             |
- |   CHIEF OF STAFF  (the brain)                               |
- |                                                             |
- |   Owns triage, prioritization, prep, drafting,              |
- |   risk framing, and all recommendations.                    |
- |                                                             |
- |   Tools:  CRM (MSX)  |  Vault (OIL)  |  Search  |  Edit     |
- |                                                             |
- |   +-----------------------------------------------------+   |
- |   |  When an M365 action is needed (send email, post    |   |
- |   |  to Teams, schedule meeting, etc.)  ------------>   |   |
- |   +-----------------------------------------------------+   |
- |                                                             |
- +------------------------------+------------------------------+
-                                |  delegates
-                                v
- +-------------------------------------------------------------+
- |                                                             |
- |   M365-ACTIONS  (the hands)                                 |
- |                                                             |
- |   Executes scoped M365 operations only.                     |
- |   Never makes strategic decisions.                          |
- |                                                             |
- |   Tools:  Mail  |  Calendar  |  Teams  |  SharePoint  |  Word
- |                                                             |
- +-------------------------------------------------------------+
+
+| Layer | What it means for you |
+| --- | --- |
+| **1. Instructions** | Your style, your VIPs, your priorities — written in plain markdown. Edit anytime. |
+| **2. Live Data** | One request, many systems read at once. No more tab-hopping. |
+| **3. Second Brain** | L.C.G. remembers your customers, deals, and corrections. **It gets smarter every week.** |
+
+### Two Agents — One Brain, One Set of Hands
+
+```mermaid
+flowchart LR
+  U["👤 YOU"] --> B
+
+  subgraph B["🧠 Chief of Staff — the brain"]
+    B1["Thinks, triages, drafts, recommends"]
+  end
+
+  B -- "delegates safely" --> H
+
+  subgraph H["🤖 M365-Actions — the hands"]
+    H1["Sends drafts, creates meetings, posts to Teams"]
+  end
+
+  style U fill:#0d1117,stroke:#58a6ff,color:#e6edf3
+  style B fill:#1a1a2e,stroke:#4cc9f0,stroke-width:2px,color:#e0e0e0
+  style H fill:#1a1a2e,stroke:#f72585,stroke-width:2px,color:#e0e0e0
 ```
 
-| Agent                    | Role                              | Tools                                   | Guardrails                                                                |
-| ------------------------ | --------------------------------- | --------------------------------------- | ------------------------------------------------------------------------- |
-| **Chief of Staff** | Strategy, triage, prep, drafting  | CRM, Vault, Search, Edit                | Never sends email directly; stages all CRM writes                         |
-| **m365-actions**   | Execute delegated M365 operations | Mail, Calendar, Teams, SharePoint, Word | Only acts on scoped instructions from parent; never makes strategic calls |
-
-> The brain resolves all context from the vault *before* handing off to the hands — so the grind is fast, accurate, and hallucination-free.
+The **brain** does all the thinking and never touches your inbox or Teams directly. The **hands** only act on scoped, approved instructions. If the brain wants to send a message, it hands off a draft — you approve before it leaves.
 
 ---
 
-## What Copilot Grinds For You
+## You Stay in Control
 
-All workflows are one `/prompt` away — type it in Copilot Chat and pick from the list.
+Copilot grinds, but **nothing ships without you**.
 
-### Daily Operations
+| What L.C.G. does | What it won't do |
+| --- | --- |
+| ✅ **Drafts emails** in your voice | ❌ Never sends email without your review |
+| ✅ **Prepares Teams messages** | ❌ Never posts without explicit approval |
+| ✅ **Stages CRM updates** for review | ❌ Never writes to CRM silently |
+| ✅ **Reads your vault** for context | ❌ Never syncs vault data to the cloud |
+| ✅ **Logs every action** it takes | ❌ No surprise automation — ever |
 
-| Prompt                  | What It Does                                                    |
-| ----------------------- | --------------------------------------------------------------- |
-| 🌅`/morning-triage`   | Scans inbox + calendar → produces a prioritized daily brief    |
-| 🌅`/morning-prep`     | Condensed variant — quick morning readout                      |
-| 📋`/meeting-brief`    | Assembles a one-page brief from email, CRM, calendar, and vault |
-| 📊`/meeting-followup` | Generates post-meeting action summaries and next steps          |
-| 📩`/update-request`   | Drafts milestone follow-up emails from CRM data                 |
-
-### Weekly & Recurring
-
-| Prompt                      | What It Does                                     |
-| --------------------------- | ------------------------------------------------ |
-| 📆`/weekly-rob`           | Prepares the weekly rhythm-of-business summary   |
-| 🏆`/winning-wednesdays`   | Summarizes Winning Wednesdays channel highlights |
-| 🏆`/win-wire-digest`      | Compiles Win Wire entries into a digest          |
-| 🏆`/patty-d-deal-summary` | Drafts a Patty D deal recap                      |
-| 📢`/stu-highlights`       | Pulls STU channel highlights                     |
-
-### System Maintenance
-
-| Prompt                          | What It Does                                                            |
-| ------------------------------- | ----------------------------------------------------------------------- |
-| 🔄`/learning-review`          | Reviews corrections → proposes vault promotions for recurring patterns |
-| ✏️`/triage-correction-loop` | Captures triage corrections to feed the learning loop                   |
-| 🧹`/vault-hygiene`            | Cleans stale notes, migrates lingering action items                     |
-| 🎨`/pptx-builder`             | Generates a PowerPoint deck from structured content                     |
-
-### Self-Correction
-
-Copilot even fixes its own mistakes. Every core workflow has a **repair** prompt that auto-corrects validation failures:
-
-| Repair Prompt                | Fixes                    |
-| ---------------------------- | ------------------------ |
-| `/morning-triage-repair`   | Morning triage output    |
-| `/meeting-brief-repair`    | Meeting brief output     |
-| `/meeting-followup-repair` | Meeting follow-up output |
-| `/update-request-repair`   | Update request output    |
-| `/learning-review-repair`  | Learning review output   |
+> **Your data stays local.** Your vault lives on your machine. Your CRM credentials never leave your session. No external training. No "cloud memory." Just you and Copilot.
 
 ---
 
-## Project Structure
+## What's Under the Hood
 
+L.C.G. is built on four design principles that make it different from a chatbot:
+
+| | Principle | Why it matters to you |
+|---|---|---|
+| 💬 | **Plain English config** | Change any behavior by editing a markdown file — no code, no IT ticket |
+| 🏠 | **Local-first** | Your data never leaves your laptop |
+| 🔀 | **Multi-signal** | One request cross-references email + calendar + CRM + your notes |
+| 🔄 | **Self-correcting** | When you correct L.C.G., it remembers — and doesn't make the same mistake twice |
+
+<details>
+<summary><strong>Connected systems (for the curious)</strong></summary>
+
+L.C.G. connects to your live enterprise data through a secure local bridge. One request reads from all of these at once:
+
+| Category | Systems |
+|---|---|
+| 📧 **Communication** | Outlook Mail, Teams Chat, Teams Channels |
+| 📅 **Scheduling** | Outlook Calendar, room booking |
+| 📊 **CRM** | Microsoft Sales Experience (MSX) — opportunities, milestones, accounts |
+| 📈 **Analytics** | Power BI — billed pipeline, consumption, SQL600, and more |
+| 📁 **Files** | SharePoint, OneDrive, Word |
+| 🗄️ **Memory** | Your local Obsidian vault |
+| 🔍 **Search** | WorkIQ cross-M365 retrieval |
+
+</details>
+
+<details>
+<summary><strong>Developer reference</strong></summary>
+
+### Project structure
 ```
 L.C.G/
 ├── .github/
-│   ├── instructions/        ← 5 behavior rules (triage, prep, CRM, comms, copilot)
-│   ├── prompts/             ← 19 workflow templates (morning triage, meeting brief, etc.)
-│   ├── skills/              ← 21 domain skills (calendar scoping, pipeline triage, etc.)
-│   └── agents/              ← Agent definitions (Chief of Staff)
-├── scripts/                 ← Automation scripts (morning prep, meeting prep, etc.)
-├── vault-starter/           ← Obsidian vault templates & preferences
-│   ├── _LCG/               ← Operating rules, VIP list, learning log
-│   ├── Daily/               ← Morning triage output
-│   └── Meetings/            ← Meeting prep one-pagers
-├── _specs/                  ← Design specifications & architecture docs
-└── package.json             ← All npm scripts for workflows
+│   ├── instructions/        ← behavior rules (triage, prep, CRM, comms)
+│   ├── prompts/             ← workflow templates
+│   ├── skills/              ← 34+ domain skills
+│   └── agents/              ← agent definitions
+├── scripts/                 ← automation helpers
+├── vault-starter/           ← Obsidian vault templates
+└── package.json
 ```
 
----
+### MCP config
+All live-data connections are declared in `.vscode/mcp.json`.
 
-## MCP Servers
+### npm scripts (optional, for headless runs)
 
-L.C.G. connects to MCP servers through the workspace MCP config in [.vscode/mcp.json](/Users/jinle/Repos/_InternalTools/LCG/.vscode/mcp.json).
+| Command | Purpose |
+| --- | --- |
+| `npm run setup` | Verify prerequisites and configure local env |
+| `npm run check` | Verify environment and workspace config |
+| `npm run vault:init` | Bootstrap Obsidian vault from templates |
+| `npm run morning:validate` | Validate morning brief output |
+| `npm run meeting:validate` | Validate meeting brief |
+| `npm run eval` | Run evaluation suite |
 
-### Workspace-Configured Servers
-
-| Server                                                           | Transport | Purpose                                |
-| ---------------------------------------------------------------- | --------- | -------------------------------------- |
-| **msx-crm**                                                | `npx`   | Microsoft Sales Experience integration |
-| **oil**                                                    | `npx`   | Obsidian vault read/write/search       |
-| **calendar / mail / teams / sharepoint / word / onedrive** | HTTP      | Microsoft 365 data and actions         |
-
----
-
-## Trust Model
-
-Copilot grinds, but **you stay in control**. Strict human-in-the-loop on everything that matters:
-
-| Policy                 | Behavior                                      |
-| ---------------------- | --------------------------------------------- |
-| **Email**        | Drafts only — never sends directly           |
-| **Teams**        | Requires explicit approval before posting     |
-| **CRM writes**   | All mutations staged in an approval queue     |
-| **Audit trail**  | Every CRM operation fully logged              |
-| **Prompt guard** | 10 injection-detection patterns on CRM inputs |
-| **Vault data**   | Stays local on disk — never synced to cloud  |
-
----
-
-## npm Scripts (Developer Reference)
-
-For when you want to let Copilot grind headlessly. Most day-to-day use goes through `/prompt` in Copilot Chat (see [What Copilot Grinds For You](#what-copilot-grinds-for-you) above).
-
-| Category             | Command                              | Description                                  |
-| -------------------- | ------------------------------------ | -------------------------------------------- |
-| **Setup**      | `npm run setup`                    | Verify prerequisites and configure local env |
-|                      | `npm run check`                    | Verify environment and workspace config      |
-|                      | `npm run vault:init`               | Bootstrap Obsidian vault from templates      |
-| **Validation** | `npm run morning:validate`         | Validate morning brief output                |
-|                      | `npm run meeting:validate`         | Validate meeting brief                       |
-|                      | `npm run update-request:validate`  | Validate update request output               |
-|                      | `npm run learning:review:validate` | Validate learning review output              |
-| **Eval**       | `npm run eval`                     | Run evaluation suite                         |
-|                      | `npm run eval:live`                | Run live evaluation tests                    |
+</details>
 
 ---
 
