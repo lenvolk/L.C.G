@@ -68,6 +68,21 @@ fi
 INSTALL_DIR="${INSTALL_DIR/#\~/$HOME}"
 INSTALL_PARENT="$(dirname "$INSTALL_DIR")"
 
+# Block installation into cloud-synced directories (credentials would sync to the cloud).
+INSTALL_DIR_LOWER="$(printf '%s' "$INSTALL_DIR" | tr '[:upper:]' '[:lower:]')"
+if [[ "$INSTALL_DIR_LOWER" == *"onedrive"* || "$INSTALL_DIR_LOWER" == *"dropbox"* || "$INSTALL_DIR_LOWER" == *"google drive"* || "$INSTALL_DIR_LOWER" == *"icloud"* ]]; then
+  say "ERROR: Install path appears to be inside a cloud-synced folder:"
+  say "  $INSTALL_DIR"
+  say ""
+  say "L.C.G. stores cached credentials locally (.env, .npmrc tokens). Installing"
+  say "here would sync those secrets to the cloud — which will get you an email"
+  say "from CISO you don't want."
+  say ""
+  say "Choose a non-synced directory instead:"
+  say "  curl ... | bash -s -- --dir \"\$HOME/L.C.G\""
+  exit 1
+fi
+
 if [[ -e "$INSTALL_DIR" && $FORCE -ne 1 ]]; then
   say "Destination already exists: $INSTALL_DIR"
   say "Re-run with --force to replace it, or use --dir to choose another path."

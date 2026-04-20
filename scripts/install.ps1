@@ -19,6 +19,22 @@ function Write-Info($message) {
 
 $Dir = [System.IO.Path]::GetFullPath($Dir)
 
+# Block installation into cloud-synced directories (credentials would sync to the cloud).
+$dirLower = $Dir.ToLower()
+if ($dirLower -match 'onedrive|dropbox|google drive|icloud') {
+  Write-Host ''
+  Write-Host 'ERROR: Install path appears to be inside a cloud-synced folder:' -ForegroundColor Red
+  Write-Host "  $Dir" -ForegroundColor Red
+  Write-Host ''
+  Write-Host 'L.C.G. stores cached credentials locally (.env, .npmrc tokens). Installing' -ForegroundColor Yellow
+  Write-Host 'here would sync those secrets to the cloud — which will get you an email' -ForegroundColor Yellow
+  Write-Host 'from CISO you don''t want.' -ForegroundColor Yellow
+  Write-Host ''
+  Write-Host 'Choose a non-synced directory instead:' -ForegroundColor Cyan
+  Write-Host '  ... | iex; Install-LCG -Dir "$HOME\L.C.G"' -ForegroundColor Cyan
+  exit 1
+}
+
 if ((Test-Path $Dir) -and -not $Force) {
   Write-Error "Destination already exists: $Dir`nRe-run with -Force to replace it, or pass -Dir to choose another path."
 }
