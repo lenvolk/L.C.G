@@ -69,13 +69,13 @@ brew install git gh
 **macOS / Linux:**
 
 ```bash
-gh repo clone JinLee794/L.C.G && cd L.C.G && ./scripts/bootstrap.sh
+git clone https://github.com/JinLee794/L.C.G.git && cd L.C.G && ./scripts/bootstrap.sh
 ```
 
 **Windows (PowerShell 7 — the window opened in Step 0):**
 
 ```powershell
-gh repo clone JinLee794/L.C.G; cd L.C.G; Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force; .\scripts\bootstrap.ps1
+git clone https://github.com/JinLee794/L.C.G.git; cd L.C.G; Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force; .\scripts\bootstrap.ps1
 ```
 
 The bootstrap script installs Node.js 18+ (if missing), `npm install`s the project, configures GitHub Packages auth, scaffolds a local Obsidian vault at `.vault/`, writes a gitignored `.env`, and registers the `mcaps` CLI globally via `npm link`.

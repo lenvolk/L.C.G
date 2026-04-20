@@ -41,10 +41,47 @@ function Test-Node {
   return ($major -ge $MinNodeMajor)
 }
 
+function Test-WingetConnectivity {
+  Say-Info "Checking connectivity to winget CDN…"
+  try {
+    $r = Test-NetConnection -ComputerName 'cdn.winget.microsoft.com' -Port 443 -WarningAction SilentlyContinue
+    if ($r.TcpTestSucceeded) {
+      Say-Ok  "cdn.winget.microsoft.com:443 reachable"
+      return $true
+    }
+  } catch { }
+  Say-Warn "cdn.winget.microsoft.com:443 is not reachable."
+  Say-Info "Check VPN/proxy, or install Node manually: https://nodejs.org"
+  return $false
+}
+
+function Invoke-WingetNodeInstall {
+  & winget install --id OpenJS.NodeJS.LTS --source winget `
+    --silent --accept-package-agreements --accept-source-agreements
+  return $LASTEXITCODE
+}
+
 function Install-Node {
   if (Get-Command winget -ErrorAction SilentlyContinue) {
+    if (-not (Test-WingetConnectivity)) {
+      throw "winget CDN unreachable — cannot auto-install Node.js"
+    }
+
     Say-Info "Installing Node via winget…"
-    & winget install --id OpenJS.NodeJS.LTS --silent --accept-package-agreements --accept-source-agreements
+    $code = Invoke-WingetNodeInstall
+
+    # 0x80072EFD and similar WinINet blips are transient on fresh VMs.
+    # Refresh sources once and retry before giving up.
+    if ($code -ne 0) {
+      Say-Warn "winget install failed (exit $code). Refreshing sources and retrying once…"
+      & winget source reset --force 2>$null | Out-Null
+      & winget source update 2>$null | Out-Null
+      $code = Invoke-WingetNodeInstall
+    }
+
+    if ($code -ne 0) {
+      throw "winget install failed with exit code $code"
+    }
     return
   }
   if (Get-Command choco -ErrorAction SilentlyContinue) {
