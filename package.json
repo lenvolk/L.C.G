@@ -34,7 +34,7 @@
     "meeting:followup": "node scripts/run.js meeting-followup",
     "update-request:run": "node scripts/run.js update-request",
     "learning:review": "node scripts/run.js learning-review",
-    "postinstall": "node scripts/init.js",
+    "setup": "node scripts/init.js",
     "docs:install": "pip install -r site/requirements.txt",
     "docs:serve": "mkdocs serve -f site/mkdocs.yml",
     "docs:build": "mkdocs build -f site/mkdocs.yml",
