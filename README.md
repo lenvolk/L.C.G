@@ -51,6 +51,13 @@ curl -fsSL https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/instal
 Set-ExecutionPolicy -Scope Process Bypass -Force; irm https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/install.ps1 | iex
 ```
 
+For non-main branch testing on Windows PowerShell 5.1, use:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass -Force
+& ([ScriptBlock]::Create((irm https://raw.githubusercontent.com/JinLee794/L.C.G/<branch>/scripts/install.ps1))) -Ref <branch>
+```
+
 The installer creates `L.C.G/` in your current directory and runs the bootstrap automatically. Follow any prompts that appear.
 
 ---

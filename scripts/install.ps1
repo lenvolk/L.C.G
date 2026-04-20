@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
   [string]$Dir = (Join-Path (Get-Location).Path 'L.C.G'),
-  [string]$Ref = 'main',
+  [string]$Ref,
   [switch]$Force,
   [Parameter(ValueFromRemainingArguments = $true)]
   [string[]]$BootstrapArgs
@@ -11,11 +11,75 @@ $ErrorActionPreference = 'Stop'
 
 $repoOwner = 'JinLee794'
 $repoName = 'L.C.G'
-$archiveUrl = "https://codeload.github.com/$repoOwner/$repoName/zip/refs/heads/$Ref"
+$defaultRef = 'main'
 
 function Write-Info($message) {
   Write-Host $message -ForegroundColor Cyan
 }
+
+function Resolve-InstallRef {
+  param(
+    [string]$ProvidedRef,
+    [bool]$WasExplicit
+  )
+
+  if ($WasExplicit -and -not [string]::IsNullOrWhiteSpace($ProvidedRef)) {
+    return [pscustomobject]@{
+      Ref = $ProvidedRef
+      Source = 'explicit'
+    }
+  }
+
+  if (-not [string]::IsNullOrWhiteSpace($env:LCG_INSTALL_REF)) {
+    return [pscustomobject]@{
+      Ref = $env:LCG_INSTALL_REF
+      Source = 'env:LCG_INSTALL_REF'
+    }
+  }
+
+  try {
+    $history = Get-History -Count 25 -ErrorAction Stop | Sort-Object Id -Descending
+    foreach ($entry in $history) {
+      $line = [string]$entry.CommandLine
+      if ([string]::IsNullOrWhiteSpace($line)) {
+        continue
+      }
+
+      if ($line -match "raw\.githubusercontent\.com/$repoOwner/$repoName/([^/\s]+)/scripts/install\.ps1") {
+        return [pscustomobject]@{
+          Ref = $matches[1]
+          Source = 'history:raw-url'
+        }
+      }
+
+      if ($line -match "github\.com/$repoOwner/$repoName/blob/([^/\s]+)/scripts/install\.ps1") {
+        return [pscustomobject]@{
+          Ref = $matches[1]
+          Source = 'history:blob-url'
+        }
+      }
+    }
+  }
+  catch {
+    # Ignore history read failures (non-interactive shells may not expose history).
+  }
+
+  return [pscustomobject]@{
+    Ref = $defaultRef
+    Source = 'default'
+  }
+}
+
+$wasRefExplicit = $PSBoundParameters.ContainsKey('Ref')
+$resolvedRef = Resolve-InstallRef -ProvidedRef $Ref -WasExplicit $wasRefExplicit
+$Ref = $resolvedRef.Ref
+$refSource = $resolvedRef.Source
+
+Write-Info "PowerShell version: $($PSVersionTable.PSVersion.ToString())"
+Write-Info "Install ref source: $refSource"
+Write-Info "Using ref '$Ref'."
+
+$archiveUrl = "https://codeload.github.com/$repoOwner/$repoName/zip/refs/heads/$Ref"
 
 $Dir = [System.IO.Path]::GetFullPath($Dir)
 
