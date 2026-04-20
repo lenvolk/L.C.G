@@ -75,7 +75,7 @@ git clone --branch lenvolk-l.c.g https://github.com/JinLee794/L.C.G.git && cd L.
 **Windows (PowerShell 7 — the window opened in Step 0):**
 
 ```powershell
-git clone --branch lenvolk-l.c.g https://github.com/JinLee794/L.C.G.git; cd L.C.G; Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force; .\scripts\bootstrap.ps1
+cd C:\Temp; git clone --branch lenvolk-l.c.g https://github.com/JinLee794/L.C.G.git; cd L.C.G; Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force; .\scripts\bootstrap.ps1
 ```
 
 The bootstrap script installs Node.js 18+ (if missing), `npm install`s the project, configures GitHub Packages auth, scaffolds a local Obsidian vault at `.vault/`, writes a gitignored `.env`, and registers the `mcaps` CLI globally via `npm link`.
