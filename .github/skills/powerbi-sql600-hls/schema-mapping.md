@@ -418,6 +418,104 @@ CALCULATETABLE(
 > If no timeline is provided, always filter on "FY26" on `[Fiscal Year]` in `'1) Calendar'`.
 > "ACR", "Azure Consumed Revenue", and "Consumption" are synonyms. All in $s.
 > "Pipe", "Pipeline ACR", and "Pipeline" are synonyms. All in $s.
+
+---
+
+## Azure All-in-One (AIO) Cross-Reference Model
+
+**Model:** MSA_AzureConsumption_Enterprise (MSXI BICOE)
+**Semantic Model ID:** `726c8fed-367a-4249-b685-e4e22ca82b3d`
+**Report ID:** `d07c4e15-95f9-42f6-8411-59293f6895a1`
+
+Used **only** for cross-referencing SQL600 HLS accounts with full Azure consumption data. Provides month-over-month ACR at account level, budget attainment, and pipeline broken down by strategic pillar and solution play — enriching the SQL600 view with service-level granularity.
+
+### Join Key
+
+| SQL600 Model | AIO Model | Notes |
+|---|---|---|
+| `'2) Account'[TPID]` | `'DimCustomer'[TPID]` | Integer, exact match |
+
+TPID list is gathered from SQL600 Q5 (Top Accounts) + Q8 (Gap Accounts) + Q6 (Renewal Accounts) and passed to AIO queries via `TREATAS`.
+
+### AIO Tables & Columns Used
+
+#### DimCustomer (dimension)
+
+| Column | Type | Notes |
+|---|---|---|
+| `TPID` | Integer | PK — join key to SQL600 |
+| `TPAccountName` | Text | Display name (may differ slightly from SQL600 `TopParent`) |
+
+#### DimDate (dimension)
+
+| Column | Type | Notes |
+|---|---|---|
+| `IsAzureClosedAndCurrentOpen` | Text | `"Y"` = YTD closed months + current open. **Always filter to "Y".** |
+| `FY_Rel` | Text | `"FY"` = current fiscal year |
+
+> **⚠️ Month Column Discovery:** The fiscal month column name for time-series queries varies across MSXI model versions. On first AIO query batch, include a **DimDate schema probe** (see [query-rules.md](query-rules.md) § QA0) to discover the available month-grain column. Common names: `[FiscalYearMonth]`, `[MonthStartDate]`, `[CalendarYearMonth]`, `[FiscalMonth]`. Cache the discovered column name for subsequent queries.
+
+#### DimViewType (dimension)
+
+| Column | Type | Notes |
+|---|---|---|
+| `ViewType` | Text | `"Curated"` — **always filter to "Curated"** |
+
+#### M_ACR (measure group)
+
+| Measure | Notes |
+|---|---|
+| `$ ACR` | Total ACR — works at any grain in the query |
+| `$ ACR Last Closed Month` | Snapshot: last fully closed month ACR |
+| `% ACR Budget Attain (YTD)` | Budget attainment percentage YTD |
+
+#### F_AzureConsumptionPipe (fact — pipeline)
+
+| Column | Type | Notes |
+|---|---|---|
+| `TPID` | Integer | Account FK |
+| `CRMAccountName` | Text | |
+| `OpportunityName` | Text | |
+| `OpportunityNumber` | Text | |
+| `SalesStageName` | Text | Full stage name |
+| `CommitmentRecommendation` | Text | |
+| `MilestoneStatus` | Text | `"In Progress"`, `"Not Started"`, `"Blocked"` |
+| `MilestoneName` | Text | |
+| `MilestoneOwner` | Text | |
+| `MilestoneCompletionMonth` | Text | |
+| `SolutionPlay` | Text | e.g. `"Migrate & Modernize"` |
+| `StrategicPillar` | Text | e.g. `"Data & AI"`, `"Infra"` |
+| `SuperStrategicPillar` | Text | |
+| `CRMLink` | Text | Opportunity deep link |
+| `IsOpptySharedWithPartner` | Text | |
+
+#### M_ACRPipe (measure group — pipeline)
+
+| Measure | Notes |
+|---|---|
+| `$ Consumption Pipeline All` | All pipeline ACR |
+| `$ Qualified Pipeline Prior Week all` | Prior week qualified |
+| `$ Consumption Committed Pipeline Prior Week All` | Prior week committed |
+
+### SQL600-Relevant Service Mapping (AIO StrategicPillar → SQL600 Workloads)
+
+These AIO pillars and solution plays map to SQL600-relevant services. Used to filter/highlight the service breakdown:
+
+| AIO StrategicPillar | SQL600 Relevance | Notes |
+|---|---|---|
+| `Data & AI` | **Primary** | Core SQL modernization, Cosmos DB, PostgreSQL, analytics |
+| `Infra` | **High** | SQL VM IaaS migrations, Arc-enabled SQL Server |
+| `Digital & App Innovation` | Medium | App modernization that pulls along DB modernization |
+| `Security` | Low | Relevant only when tied to data governance |
+| `Business Applications` | Low | Peripheral |
+| `Modern Work` | Not relevant | |
+
+| AIO SolutionPlay | SQL600 Relevance |
+|---|---|
+| `Migrate & Modernize` | **Primary** — direct SQL migration motions |
+| `Build and Modernize AI Apps` | **High** — AI apps require modernized data layer |
+| `Infra and Database Migration to Azure` | **Primary** — includes database migrations |
+| `Innovate with AI Services` | Medium — downstream of data modernization |
 > When asked about customers/accounts, return `[TopParent]` from `'2) Account'`.
 > When asked about opportunities, include `[OpportunityID]`, `[OpportunityName]`, `[OpportunityLink]`.
 > If asked about ACR in any other context, use `ACR (Total by Closed Month)`.

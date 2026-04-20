@@ -43,6 +43,55 @@
 
 import { readFileSync } from "node:fs";
 
+// ── Sales Program workload catalog ──────────────────────────────────
+
+const SALES_PROGRAM_WORKLOAD_ENTRIES = [
+  // Migrate & Modernize to Azure SQL / new App Development
+  ["Data: SQL On-prem to SQL MI (Paas)", "Migrate & Modernize to Azure SQL / new App Development"],
+  ["Data: SQL to Azure SQL Hyperscale (AI Apps & Agents)", "Migrate & Modernize to Azure SQL / new App Development"],
+  ["Data: SQL Modernization to Azure SQL DB with AI (Paas)", "Migrate & Modernize to Azure SQL / new App Development"],
+  ["Data: SQL Modernization to Azure SQL MI with AI (Paas)", "Migrate & Modernize to Azure SQL / new App Development"],
+  ["Data: SQL on-prem to Azure SQL VM (IaaS)", "Migrate & Modernize to Azure SQL / new App Development"],
+  ["Data: Analytics - Fabric SQL Databases (OLTP)", "Migrate & Modernize to Azure SQL / new App Development"],
+
+  // Arc-Enablement / ESU / SQL PayGo
+  ["Data: Hybrid: Arc-Enabled SQL Server", "Arc-Enablement / ESU / SQL PayGo"],
+  ["Data: Arc-Enabled SQL 2014 ESU", "Arc-Enablement / ESU / SQL PayGo"],
+  ["Data: SQL Billed TO Azure SQL PayGo Licenses (Arc and Azure)", "Arc-Enablement / ESU / SQL PayGo"],
+  ["Infra: Hybrid - Arc-Enabled Servers", "Arc-Enablement / ESU / SQL PayGo"],
+
+  // Migrate PostgreSQL / PostgreSQL new app development
+  ["Data: PostgreSQL Flexible Server (AI Apps & Agents)", "Migrate PostgreSQL / PostgreSQL new app development"],
+  ["Data: PostgreSQL Flexible server (Migrate and Modernize)", "Migrate PostgreSQL / PostgreSQL new app development"],
+
+  // Building AI Apps with DocumentDB / Cosmos DB
+  ["Data: Cosmos DB (AI Apps & Agents)", "Building AI Apps with DocumentDB / Cosmos DB"],
+  ["Data: Cosmos DB (Migrate and Modernize)", "Building AI Apps with DocumentDB / Cosmos DB"],
+
+  // Oracle to SQL Migration
+  ["Data: Oracle to Azure SQL Migration", "Oracle to SQL Migration"],
+  ["Data: Oracle to PostgreSQL Flexible Server (Migrate & Modernize)", "Oracle to SQL Migration"],
+];
+
+function normalizeWorkloadLabel(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+const SALES_PROGRAM_WORKLOAD_MAP = new Map(
+  SALES_PROGRAM_WORKLOAD_ENTRIES.map(([workload, category]) => [
+    normalizeWorkloadLabel(workload),
+    category,
+  ])
+);
+
+function salesProgramCategoryForWorkload(workload) {
+  if (!workload) return null;
+  return SALES_PROGRAM_WORKLOAD_MAP.get(normalizeWorkloadLabel(workload)) || null;
+}
+
 // ── Args ────────────────────────────────────────────────────────────
 const args = process.argv.slice(2);
 let inputFile = null;
@@ -135,7 +184,8 @@ for (const row of pipeline) {
     0;
 
   const tier = classifyWorkload(workload, modFlag);
-  if (tier === 0) continue;
+  const salesProgramCategory = salesProgramCategoryForWorkload(workload);
+  if (tier === 0 && !salesProgramCategory) continue;
 
   const oppId =
     col(row, "OpportunityID") ||
@@ -184,6 +234,7 @@ for (const row of pipeline) {
       col(row, "StrategicPillar") ||
       col(row, "✽ Pipeline[StrategicPillar]") ||
       "",
+    salesProgramCategory,
   });
 }
 
@@ -237,7 +288,11 @@ gapAccounts.sort((a, b) => (b.sqlCores || 0) - (a.sqlCores || 0));
 // ── Deduplicate opp IDs for CRM lookup ──────────────────────────────
 
 const uniqueOppIds = [
-  ...new Set(sqlOpps.filter((o) => o.tier <= 2).map((o) => o.oppId)),
+  ...new Set(
+    sqlOpps
+      .filter((o) => o.tier <= 2 || !!o.salesProgramCategory)
+      .map((o) => o.oppId)
+  ),
 ].filter(Boolean);
 
 // ── Summary stats ───────────────────────────────────────────────────

@@ -128,7 +128,8 @@ Assemble the data into the narrative structure defined in [output-template.md](o
 4. **GCP competitive** — Call out gap accounts (no pipeline) as GCP leakage risk
 5. **Renewal urgency** — Flag Q3/Q4 renewal accounts with SQL Cores and current pipeline coverage
 6. **WoW delta** — Show Realized ACR + Baseline + Pipe week-over-week movement with $ and direction
-7. **Top accounts** — Highlight 5–7 accounts by ACR, growth trajectory, or risk
+7. **Top accounts** — Highlight 5–7 accounts by ACR, growth trajectory, or risk, and include a concrete recommended SQL modernization next step for each (pre-computed by `generate-next-steps.js` using GitHub Models API)
+8. **AI-forward modernization insight** — Surface a portfolio-level insight connecting modernization execution to downstream AI enablement readiness (pre-computed by `generate-next-steps.js`)
 
 ### Step 4 — Present & Persist
 
@@ -146,9 +147,15 @@ When the user says "html report", "dashboard", "rich report", or "exec report":
 2. Write JSON to `/tmp/sql600-data-<YYYY-MM-DD>.json`
 3. Enrich with MSX `AccountId` (required for clickable deep links):
    `node scripts/helpers/enrich-sql600-accounts.js /tmp/sql600-data-<YYYY-MM-DD>.json`
-4. Run: `node scripts/helpers/generate-sql600-report.js /tmp/sql600-data-<YYYY-MM-DD>.json`
-5. Output lands in `.copilot/docs/sql600-hls-readout-<YYYY-MM-DD>.html`
-6. Open in browser for preview; printable to PDF via Cmd+P
+4. Generate LLM-backed recommended next steps and AI-enablement outlook (parallel, uses GitHub Models API):
+   `node scripts/helpers/generate-next-steps.js /tmp/sql600-data-<YYYY-MM-DD>.json`
+   - Uses `gpt-4.1-mini` by default (cheap/fast). Override with `--model <name>`.
+   - Runs account-level prompts in parallel (`--concurrency 8` default).
+   - Adds `NextStep` to each account row and `_aiInsight.modernizationOutlook` to the JSON.
+   - Use `--dry-run` to preview without API calls.
+5. Run: `node scripts/helpers/generate-sql600-report.js /tmp/sql600-data-<YYYY-MM-DD>.json`
+6. Output lands in `.copilot/docs/sql600-hls-readout-<YYYY-MM-DD>.html`
+7. Open in browser for preview; printable to PDF via Cmd+P
 
 **JSON input schema** for `generate-sql600-report.js`:
 ```json
@@ -158,9 +165,10 @@ When the user says "html report", "dashboard", "rich report", or "exec report":
   "ranking": [{ "Industry": "string", "ACR_LCM": number, "AccountCount": number }],
   "verticals": [{ "Vertical": "string", "AccountCount": number, "ACR_LCM": number, "PipeCommitted": number, "PipeUncommitted": number, "AnnualizedGrowth": number, "ModOpps": number }],
   "trend": [{ "FiscalMonth": "YYYY-MM-DD", "FiscalQuarter": "string", "ACR": number }],
-  "topAccounts": [{ "TopParent": "string", "TPID": number, "AccountId": "guid", "Vertical": "string", "Segment": "string", "ACR_LCM": number, "PipeCommitted": number|null, "PipeUncommitted": number|null, "AnnualizedGrowth": number, "QualifiedOpps": number|null, "TotalOpps": number|null, "SQLCores": number|null }],
-  "renewals": [{ "TopParent": "string", "TPID": number, "AccountId": "guid", "Category": "string", "RenewalQuarter": "string|null", "SQLCores": number, "ArcEnabled": "Yes|No", "ACR_LCM": number|null, "PipeCommitted": number|null }],
-  "gapAccounts": [{ "TopParent": "string", "TPID": number, "AccountId": "guid", "Vertical": "string", "ACR_LCM": number|null, "PipeUncommitted": number|null, "SQLCores": number|null }]
+  "topAccounts": [{ "TopParent": "string", "TPID": number, "AccountId": "guid", "Vertical": "string", "Segment": "string", "ACR_LCM": number, "PipeCommitted": number|null, "PipeUncommitted": number|null, "AnnualizedGrowth": number, "QualifiedOpps": number|null, "TotalOpps": number|null, "SQLCores": number|null, "NextStep": "string (from generate-next-steps.js)" }],
+  "renewals": [{ "TopParent": "string", "TPID": number, "AccountId": "guid", "Category": "string", "RenewalQuarter": "string|null", "SQLCores": number, "ArcEnabled": "Yes|No", "ACR_LCM": number|null, "PipeCommitted": number|null, "NextStep": "string (from generate-next-steps.js)" }],
+  "gapAccounts": [{ "TopParent": "string", "TPID": number, "AccountId": "guid", "Vertical": "string", "ACR_LCM": number|null, "PipeUncommitted": number|null, "SQLCores": number|null, "NextStep": "string (from generate-next-steps.js)" }],
+  "_aiInsight": { "modernizationOutlook": "string (from generate-next-steps.js)" }
 }
 ```
 

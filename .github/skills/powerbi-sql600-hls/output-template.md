@@ -4,7 +4,7 @@
 
 ## Vault Path
 
-```
+```text
 Daily/SQL600-HLS/sql600-hls-readout-<YYYY-MM-DD>.md
 ```
 
@@ -138,10 +138,10 @@ readout_mode: "<Full|Accounts|Renewal|Modernization|Trend|Ranking|AccountDrill>"
 
 ## 🔝 Top Accounts
 
-| # | Account | TPID | Vertical | Segment | ACR (LCM) | Committed | Uncommitted | Ann. Growth |
-|---|---|---|---|---|---|---|---|---|
+| # | Account | TPID | Vertical | Segment | ACR (LCM) | Committed | Uncommitted | Ann. Growth | Recommended Next Step |
+|---|---|---|---|---|---|---|---|---|---|
 <for each top account:>
-| <n> | <TopParent> | <TPID> | <vertical> | <segment> | <acr> | <committed> | <uncommitted> | <growth> |
+| <n> | <TopParent> | <TPID> | <vertical> | <segment> | <acr> | <committed> | <uncommitted> | <growth> | <sql modernization next step> |
 
 ---
 
@@ -166,6 +166,10 @@ readout_mode: "<Full|Accounts|Renewal|Modernization|Trend|Ranking|AccountDrill>"
 | **Factory Attach Rate** | <factory_attach> |
 
 > <modernization narrative — coverage gaps, factory leverage opportunities>
+
+## 🧠 Modernization + AI Enablement Outlook
+
+> <forward-looking narrative — connect SQL modernization decisions now to downstream AI readiness (Azure OpenAI/copilot/data-platform needs), and call out where delay will create re-platforming risk later>
 
 ---
 

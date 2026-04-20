@@ -175,6 +175,24 @@ function topAccountRationale(a, rank) {
   return chips.join(' ');
 }
 
+// NextStep and modernization outlook are pre-computed by generate-next-steps.js
+// via the GitHub Models API. The renderer reads them from the enriched JSON.
+function compactNextStep(text) {
+  if (!text) return '';
+  const cleaned = String(text)
+    .replace(/\s+/g, ' ')
+    .replace(/[.;:,!?]+$/g, '')
+    .trim();
+  const first = cleaned.split(/[.!?]/)[0].trim();
+  const words = first.split(' ').filter(Boolean);
+  return words.slice(0, 10).join(' ');
+}
+
+function topAccountNextStep(a) {
+  const compact = compactNextStep(a.NextStep || '');
+  return compact || '<span style="color:var(--text-muted);font-style:italic">Run generate-next-steps.js to populate</span>';
+}
+
 function renewalRationale(r) {
   if (r?.Rationale) return r.Rationale;
   const chips = [];
@@ -729,6 +747,13 @@ const html = `<!DOCTYPE html>
     white-space: normal !important;
     line-height: 1.5;
   }
+  .next-step-cell {
+    width: 320px; max-width: 320px;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.45;
+  }
   .why-chip {
     display: inline-block; padding: 2px 7px; margin: 2px 3px 2px 0;
     border-radius: 4px; font-size: 10.5px; font-weight: 500;
@@ -1208,6 +1233,7 @@ const html = `<!DOCTYPE html>
         <th class="right">Opps</th>
         <th class="right">SQL Cores</th>
         <th>Why flagged</th>
+        <th class="next-step-cell">Recommended Next Step</th>
       </tr>
     </thead>
     <tbody>
@@ -1225,10 +1251,26 @@ const html = `<!DOCTYPE html>
         <td class="right">${fmtNum(a.QualifiedOpps) || '—'}/${fmtNum(a.TotalOpps) || '—'}</td>
         <td class="right">${fmtNum(a.SQLCores)}</td>
         <td class="why-cell">${topAccountRationale(a, i)}</td>
+        <td class="next-step-cell">${topAccountNextStep(a)}</td>
       </tr>`).join('\n      ')}
     </tbody>
   </table>
   ${narrative.topAccounts ? `<div class="chart-caption" style="margin-top:12px">${mdInline(narrative.topAccounts)}</div>` : ''}
+</div>
+
+<!-- Modernization + AI Enablement -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">🧠 Modernization + AI Enablement Outlook</div>
+    <span class="section-badge badge-blue">Future-ready platform signal</span>
+  </div>
+  <div class="callout">
+    ${narrative.modernization
+      ? mdInline(narrative.modernization)
+      : (data._aiInsight?.modernizationOutlook
+        ? mdInline(data._aiInsight.modernizationOutlook)
+        : 'Run <code>generate-next-steps.js</code> to populate the AI-enablement outlook.')}
+  </div>
 </div>
 
 <!-- Two column: Renewals + Gap -->
@@ -1256,6 +1298,7 @@ const html = `<!DOCTYPE html>
           <th class="right">ACR</th>
           <th class="right">Committed</th>
           <th>Why flagged</th>
+          <th class="next-step-cell">Recommended Next Step</th>
         </tr>
       </thead>
       <tbody>
@@ -1272,6 +1315,7 @@ const html = `<!DOCTYPE html>
           <td class="right">${fmtDollar(r.ACR_LCM, false)}</td>
           <td class="right">${fmtDollar(r.PipeCommitted, false)}</td>
           <td class="why-cell">${renewalRationale(r)}</td>
+          <td class="next-step-cell">${topAccountNextStep(r)}</td>
         </tr>`).join('\n        ')}
       </tbody>
     </table>
@@ -1299,6 +1343,7 @@ const html = `<!DOCTYPE html>
           <th class="right">Uncommitted</th>
           <th class="right">SQL Cores</th>
           <th>Why flagged</th>
+          <th class="next-step-cell">Recommended Next Step</th>
         </tr>
       </thead>
       <tbody>
@@ -1309,6 +1354,7 @@ const html = `<!DOCTYPE html>
           <td class="right">${fmtDollar(g.PipeUncommitted, false)}</td>
           <td class="right">${fmtNum(g.SQLCores)}</td>
           <td class="why-cell">${gapRationale(g)}</td>
+          <td class="next-step-cell">${topAccountNextStep(g)}</td>
         </tr>`).join('\n        ')}
       </tbody>
     </table>

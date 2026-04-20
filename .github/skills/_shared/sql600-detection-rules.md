@@ -1,6 +1,8 @@
-# Detection Rules — SQL600 Sales Play Tagging Audit
+# SQL600 Detection Rules — SQL Workload Patterns & Sales Play Mapping
 
 > **Freedom Level: None** — These patterns and mappings are exact. Do not add, remove, or modify workload patterns or sales play expectations without updating this file.
+
+> **Cross-role reference.** This file is the single source of truth for SQL workload classification and expected sales play values. All roles should be aware of these patterns when working on SQL600 accounts: SEs for engagement qualification, Specialists for pipeline creation, AEs for account planning, CSAMs for delivery monitoring.
 
 ---
 
@@ -39,6 +41,52 @@ Milestone workloads (from `_msp_workloadlkid_value` in CRM or `'✽ Pipeline'[Mi
 
 ---
 
+## Sales Program Workload Catalog (Catalyst Coaching Scope)
+
+Use this catalog to detect opportunities that should be tagged to a Sales Program but are not currently tagged.
+
+### Migrate & Modernize to Azure SQL / new App Development
+
+- `Data: SQL On-prem to SQL MI (Paas)`
+- `Data: SQL to Azure SQL Hyperscale (AI Apps & Agents)`
+- `Data: SQL Modernization to Azure SQL DB with AI (Paas)`
+- `Data: SQL Modernization to Azure SQL MI with AI (Paas)`
+- `Data: SQL on-prem to Azure SQL VM (IaaS)`
+- `Data: Analytics - Fabric SQL Databases (OLTP)`
+
+### Arc-Enablement / ESU / SQL PayGo
+
+- `Data: Hybrid: Arc-Enabled SQL Server`
+- `Data: Arc-Enabled SQL 2014 ESU`
+- `Data: SQL Billed TO Azure SQL PayGo Licenses (Arc and Azure)`
+- `Infra: Hybrid - Arc-Enabled Servers`
+
+### Migrate PostgreSQL / PostgreSQL new app development
+
+- `Data: PostgreSQL Flexible Server (AI Apps & Agents)`
+- `Data: PostgreSQL Flexible server (Migrate and Modernize)`
+
+### Building AI Apps with DocumentDB / Cosmos DB
+
+- `Data: Cosmos DB (AI Apps & Agents)`
+- `Data: Cosmos DB (Migrate and Modernize)`
+
+### Oracle to SQL Migration
+
+- `Data: Oracle to Azure SQL Migration`
+- `Data: Oracle to PostgreSQL Flexible Server (Migrate & Modernize)`
+
+### Untagged Sales Program Detection
+
+Flag an opportunity as **Untagged Sales Program** when BOTH conditions are true:
+
+1. `MilestoneWorkload` is an exact (case-insensitive) match to a catalog workload above.
+2. Opportunity `msp_salesplay` is missing/empty OR set to **Not Applicable** (`861980040`).
+
+This list is a coaching queue for Catalyst v-team outreach.
+
+---
+
 ## Expected Sales Play Mapping
 
 The `msp_salesplay` field on the opportunity. Expected values for SQL600 work:
@@ -73,83 +121,13 @@ Any sales play NOT in the ✅ or 🟡 lists above when the opp has Tier 1 SQL wo
 | Not Applicable | `861980040` | Must be set to a real play |
 | `null` / empty | — | Must be set |
 
-### Mapping Decision Tree
-
-```
-Is MilestoneWorkload Tier 1 (starts with "Data: SQL")?
-├── YES → Expected salesplay: "Migrate and Modernize Your Estate" (861980067)
-│         OR "Build and Modernize AI Apps" (861980037)
-│         ├── Match → ✅ Clean
-│         ├── Adjacent play (🟡 list) → ⚠️ Warning
-│         └── Other play or null → 🔴 Critical
-│
-├── Tier 2 (MySQL/PostgreSQL)?
-│   └── Flag as 🟡 Warning regardless of salesplay — needs human review
-│
-└── Modernization Flag = 1 (Tier 3)?
-    └── Report for awareness — no auto-classification
-```
-
 ---
 
 ## Severity Classification
 
-### 🔴 Critical
-
-- Tier 1 SQL workload on milestone + `msp_salesplay` is null, empty, or in the 🔴 Incorrect list
-- Priority escalation: include in executive exception summary
-
-### 🟡 Warning
-
-- Tier 1 SQL workload + `msp_salesplay` is in the 🟡 Adjacent list (valid but non-ideal)
-- Tier 2 workload (MySQL/PostgreSQL) regardless of sales play
-- Priority: include in detail section, recommend review
-
-### ⚪ Gap Account
-
-- SQL600 HLS account with `SQLCores > 0` but zero Tier 1 SQL workload opportunities
-- SQL600 HLS account with zero open opps in PBI pipeline
-- Priority: include in gap section with SQL Cores count for sizing
-
-### ✅ Clean
-
-- Tier 1 SQL workload + `msp_salesplay` is in the ✅ Correct list
-- Report count only — do not list individual clean opps unless in Account Drill mode
-
----
-
-## CRM Field Reference
-
-### Opportunity Fields
-
-| CRM Field | Display Name | Type | How Used |
-|---|---|---|---|
-| `msp_salesplay` | Sales Play | OptionSet (int) | Primary audit target — compare against expected values |
-| `name` | Opportunity Name | Text | Display in report |
-| `msp_activesalesstage` | Active Sales Stage | Text | Context for severity (early stage vs. late stage) |
-| `msp_opportunitynumber` | Opportunity Number | Text | Reference link |
-| `_ownerid_value` | Owner | Lookup | Contact for remediation |
-| `_parentaccountid_value` | Parent Account | Lookup | Account context |
-
-### Milestone Fields
-
-| CRM Field | Display Name | Type | How Used |
-|---|---|---|---|
-| `_msp_workloadlkid_value` | Workload | Lookup | Primary SQL workload identification |
-| `msp_milestoneworkload` | Workload Type | OptionSet | Workload type enum (Azure/D365/Security/MW) |
-| `msp_name` | Milestone Name | Text | Display context |
-| `msp_milestonestatus` | Status | OptionSet | Filter active milestones |
-| `msp_monthlyuse` | Monthly Use | Currency | Pipeline sizing |
-| `msp_commitmentrecommendation` | Commitment | OptionSet | Pipeline commitment level |
-| `msp_milestoneazurecapacitytype` | Azure Capacity Type | MultiSelect | Azure capacity context |
-
-### PBI Pipeline Fields (from `'✽ Pipeline'` fact)
-
-| PBI Column | Maps To | Notes |
-|---|---|---|
-| `MilestoneWorkload` | `_msp_workloadlkid_value` display value | Workload name string |
-| `Modernization Workload Flag` | Computed | 1 = modernization workload |
-| `OpportunityID` | `opportunityid` | CRM GUID for cross-reference |
-| `OpportunityName` | `name` | Display name |
-| `OpportunityLink` | `recordUrl` | CRM deep link |
-| `StrategicPillar` | Product dimension | Service category |
+| Severity | Condition |
+|---|---|
+| 🔴 **Critical** | SQL workload opp with `msp_salesplay` = null or completely unrelated play |
+| 🟡 **Warning** | SQL workload opp with adjacent but non-ideal play |
+| ⚪ **Gap** | SQL600 account with zero SQL-related opps, especially if `SQLCores` > 0 |
+| ✅ **Clean** | SQL workload opp with correct expected play |

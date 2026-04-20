@@ -12,15 +12,12 @@
 
 [![Node.js](https://img.shields.io/badge/Node.js-≥18-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Copilot](https://img.shields.io/badge/GitHub_Copilot-VS_Code-000?logo=github&logoColor=white)](https://github.com/features/copilot)
-[![MCP](https://img.shields.io/badge/MCP_Servers-12-blue)](https://modelcontextprotocol.io/)
 [![License](https://img.shields.io/badge/License-Private-red)](#)
 
-</div>
 
 ---
 
 ## Quick Start (5 Minutes)
-
 Before you begin, make sure you have:
 
 - [ ] **Microsoft corporate VPN** connected
@@ -29,58 +26,73 @@ Before you begin, make sure you have:
 
 ---
 
-### Step 0: Install Prerequisites
+### Step 0: Run The Installer
 
 > [!IMPORTANT]
-> **Git, GitHub CLI, and (on Windows) PowerShell 7 are the only tools you need to install manually.** Everything else (VS Code, Node.js, Azure CLI) is handled by the bootstrap script in Step 2.
+> **You do not need to install `git` or `gh` first anymore.** Since this repo is public, you can run the installer directly and let it pull the repo archive for you.
 
 **macOS / Linux:**
 
 ```bash
-brew install git gh
+curl -fsSL https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/install.sh | bash
 ```
 
-**Windows — paste this single line into the default Windows PowerShell terminal:**
+**Windows PowerShell:**
 
 ```powershell
-winget install --id Microsoft.PowerShell --source winget; winget install Git.Git GitHub.cli; Start-Process pwsh -ArgumentList @('-NoExit', '-Command', '$env:PATH+=\";C:\Program Files\Git\cmd;C:\Program Files\GitHub CLI\"; Write-Host \"PowerShell 7 ready - continue with Step 1\" -ForegroundColor Green')
+Set-ExecutionPolicy -Scope Process Bypass -Force; irm https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/install.ps1 | iex
 ```
 
-This installs PowerShell 7, Git, and GitHub CLI in one shot, then opens a new **PowerShell 7** window with the tools on PATH. Continue from that new window.
+This downloads the latest public repo snapshot into `~/L.C.G` and hands off to the existing bootstrap flow.
 
 > [!NOTE]
-> If you install Git or `gh` while VS Code is already open, **close and reopen VS Code entirely**. VS Code terminals inherit the system PATH from launch — newly installed tools won't be visible until you restart.
+> The installer is just a thin wrapper. It downloads the repo and then runs `scripts/bootstrap.sh` or `scripts/bootstrap.ps1` locally.
 
 ---
 
-### Step 1: Clone and bootstrap
+### Step 1: What The Bootstrap Does
 
 > [!IMPORTANT]
-> Use your **personal GitHub account** (e.g. `JohnDoe`) when `gh auth login` prompts you. Do **NOT** use your Enterprise Managed User (EMU) account — the one ending in `_microsoft`. EMU accounts cannot access GitHub Packages from external organizations.
+> When GitHub authentication is needed for package access, use your **personal GitHub account** (for example `JohnDoe`), not your Enterprise Managed User account ending in `_microsoft`.
 
-**macOS / Linux:**
+The bootstrap flow does four things:
 
-```bash
-gh auth login && gh repo clone JinLee794/L.C.G && cd L.C.G && ./scripts/bootstrap.sh --skip-clone
-```
+1. Ensures **Node.js 18+** is installed.
+2. Runs `npm install` in the repo.
+3. Walks you through **GitHub Packages auth** and local `.env` / vault setup.
+4. Registers the global **`mcaps`** command when possible.
 
-**Windows (PowerShell 7 — the window opened in Step 0):**
-
-```powershell
-gh auth login; gh repo clone JinLee794/L.C.G; cd L.C.G; Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force; .\scripts\bootstrap.ps1 -SkipClone
-```
-
-The bootstrap script installs VS Code, Node.js 18+, Azure CLI, the Copilot extension, configures GitHub Packages auth, signs you in to Azure, and opens VS Code.
+It does **not** clone the repo with `git`, install VS Code for you, or automatically sign you into Azure.
 
 > [!NOTE]
-> **If you have an existing Node.js installation**, make sure it is up-to-date (v18+) so that `npx` works correctly. The bootstrap script installs Node if missing, but won't upgrade an existing outdated installation. Run `node --version` to check.
+> **If you already have Node.js installed**, make sure it is v18+ so `npx` works correctly. The bootstrap script installs Node if missing, but does not upgrade an outdated existing install.
 
 > [!TIP]
-> Just want to check what's missing? Run with `--check-only` (macOS/Linux) or `-CheckOnly` (Windows) to see a report without installing anything.
+> Want a dry prerequisite check after install? Run `./scripts/bootstrap.sh --check` on macOS/Linux or `./scripts/bootstrap.ps1 -Check` on Windows from inside the repo.
 
-### Step 2: Start using L.C.G.
+### Step 2: Configure Your `.env` File
 
-The bootstrap script opens VS Code and installs the `lcg` terminal command automatically. You're ready to go — pick either path:
+The MCP servers in `.vscode/mcp.json` reference a local `.env` file for environment-specific settings. A `.env.example` is included as a template.
+
+```bash
+cp .env.example .env
+```
+
+Then open `.env` and set the required value:
+
+```dotenv
+OBSIDIAN_VAULT_PATH="/Path/To/Your/Obsidian/Vault"
+```
+
+Replace the path with the absolute path to your Obsidian vault directory (e.g., `"/Users/you/Documents/Obsidian/My Vault"`).
+
+> [!NOTE]
+> `.env` is git-ignored — your local paths and secrets stay on your machine.
+> The **Obsidian Intelligence Layer** (`oil`) MCP server uses this variable to locate your vault. If you skip this step, vault-dependent features (customer notes, meeting history, learning log) won't work.
+
+### Step 3: Start Using L.C.G.
+
+After bootstrap completes, you're ready to go — pick either path:
 
 **VS Code (recommended for most users):**
 
@@ -88,7 +100,7 @@ In VS Code, open **Copilot Chat** (sidebar icon or `⌃⌘I` / `Ctrl+Alt+I`) →
 
 **Terminal:**
 
-Open any terminal and type `lcg` to start an interactive session.
+Open any terminal and type `mcaps` to start an interactive session.
 
 > Both interfaces are fully equivalent — same agents, skills, and MCP servers. See [Two Ways to Use L.C.G.](#two-ways-to-use-lcg) for details.
 

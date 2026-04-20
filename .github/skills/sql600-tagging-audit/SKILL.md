@@ -13,9 +13,10 @@ argument-hint: 'Optionally specify: a specific account name, "gap accounts only"
 Two alert classes:
 1. **Mismatch** — Opp has SQL-related milestone workloads but `msp_salesplay` is not set to an expected SQL modernization play
 2. **Gap** — SQL600 HLS account has zero open SQL-related opportunities (no pipeline coverage for the program)
+3. **Win** — Opp commitment moved from `uncommitted` to `committed` since the previous audit snapshot
 
 > **⚠️ Load Order:** Read **SKILL.md first** for the full flow. Sub-files are loaded on-demand:
-> - [detection-rules.md](detection-rules.md) — SQL workload patterns, expected sales play values, flagging logic
+> - [sql600-detection-rules.md](../_shared/sql600-detection-rules.md) — SQL workload patterns, expected sales play values, flagging logic (shared cross-role reference)
 > - [output-template.md](output-template.md) — vault persistence format
 
 ## When to Use
@@ -28,7 +29,7 @@ Two alert classes:
 
 ## Freedom Level
 
-**Low** — Detection rules and workload patterns are exact. Narrative framing for the exception report is formulaic. Do not improvise severity tiers or sales play mappings — use [detection-rules.md](detection-rules.md) exactly.
+**Low** — Detection rules and workload patterns are exact. Narrative framing for the exception report is formulaic. Do not improvise severity tiers or sales play mappings — use [sql600-detection-rules.md](../_shared/sql600-detection-rules.md) exactly.
 
 ## Runtime Contract
 
@@ -130,7 +131,7 @@ ORDER BY '2) Account'[TopParent] ASC
 
 ### Step 2 — Identify SQL-Relevant Opportunities from PBI Data
 
-From Step 1 Q2 results, filter for opportunities that have **SQL-related milestone workloads**. See [detection-rules.md](detection-rules.md) § SQL Workload Patterns for the exact match list.
+From Step 1 Q2 results, filter for opportunities that have **SQL-related milestone workloads**. See [sql600-detection-rules.md](../_shared/sql600-detection-rules.md) § SQL Workload Patterns for the exact match list.
 
 Build a list of unique `OpportunityID` values that have at least one SQL workload milestone.
 
@@ -141,7 +142,7 @@ For each SQL-relevant opportunity identified in Step 2, query CRM to get the cur
 - Use `mcp_msx_list_opportunities` with `opportunityIds` array for batch lookup
 - Extract `msp_salesplay` formatted value for each opp
 
-Compare each opp's `msp_salesplay` against the expected values in [detection-rules.md](detection-rules.md) § Expected Sales Play Mapping.
+Compare each opp's `msp_salesplay` against the expected values in [sql600-detection-rules.md](../_shared/sql600-detection-rules.md) § Expected Sales Play Mapping.
 
 ### Step 4 — Detect Gap Accounts
 
@@ -153,7 +154,7 @@ These are **gap accounts** — SQL600 members with on-prem SQL footprint but no 
 
 ### Step 5 — Classify and Prioritize Exceptions
 
-Apply severity tiers from [detection-rules.md](detection-rules.md) § Severity Classification:
+Apply severity tiers from [sql600-detection-rules.md](../_shared/sql600-detection-rules.md) § Severity Classification:
 
 | Severity | Condition |
 |---|---|
@@ -161,6 +162,20 @@ Apply severity tiers from [detection-rules.md](detection-rules.md) § Severity C
 | 🟡 **Warning** | SQL workload opp with adjacent but non-ideal play (e.g., "Innovate with AI" for a SQL MI modernization) |
 | ⚪ **Gap** | SQL600 account with zero SQL-related opps, especially if `SQLCores` > 0 |
 | ✅ **Clean** | SQL workload opp with correct expected play |
+
+### Step 5b — Capture Wins (Uncommitted -> Committed)
+
+Detect opportunity-level commitment transitions by comparing the current classified snapshot with the prior run:
+
+- Input: current `classify-sql-pipeline.js` output + previous classified snapshot (`--previous`)
+- Win condition: prior commitment state = `uncommitted` and current state = `committed`
+- Output: account + opportunity-level win table in the audit note
+
+If normalized inbox data is available, correlate wins with potential winwire evidence:
+
+- Input: `normalize-mail.js` output (`--mail`)
+- Signal terms: `winwire`, `win wire`, `closed won`, `deal won`
+- Correlation: account/opportunity token overlap in message subject/snippet
 
 ### Step 6 — Present & Persist
 
@@ -222,7 +237,9 @@ node scripts/helpers/classify-sql-pipeline.js /tmp/sql600-pipeline-$DATE.json \
 # 4. Cross-reference sales plays and generate audit report
 node scripts/helpers/audit-sales-play.js \
   --pipeline /tmp/sql600-classified-$DATE.json \
+  --previous /tmp/sql600-classified-$PREV_DATE.json \
   --crm /tmp/sql600-crm-$DATE.json \
+  --mail /tmp/mail-normalized-$DATE.json \
   --format md \
   --output /tmp/sql600-audit-$DATE.md
 
@@ -236,7 +253,7 @@ node scripts/helpers/audit-sales-play.js \
 | Script | Input | Output | Agent Context Saved |
 |---|---|---|---|
 | `classify-sql-pipeline.js` | Raw PBI JSON (~100KB+) | Classified opps + gap accounts + summary.uniqueOppIds | Reads only `summary` block (~20 lines) to know which CRM lookups to do |
-| `audit-sales-play.js` | Classified JSON + CRM JSON | Exception report (JSON or Markdown) | Reads final report (~50–100 lines) instead of raw CRM data (1MB+) |
+| `audit-sales-play.js` | Classified JSON + CRM JSON (+ optional previous + normalized mail) | Exception report (JSON or Markdown) with wins | Reads final report (~50–100 lines) instead of raw CRM data (1MB+) |
 
 ### Agent Instructions for Script Use
 
@@ -244,6 +261,8 @@ node scripts/helpers/audit-sales-play.js \
 2. **Run classifier:** Execute `classify-sql-pipeline.js` and **read only `.summary`** from the output — this gives `uniqueOppIds` for CRM lookups + gap account count
 3. **CRM lookups:** Use `uniqueOppIds` to batch-fetch opportunities via `mcp_msx_list_opportunities`. Save results to `/tmp/sql600-crm-<DATE>.json`
 4. **Run auditor:** Execute `audit-sales-play.js` with `--format md`. Read the markdown output and persist to vault
+  - Include `--previous` to detect uncommitted -> committed wins
+  - Include `--mail` to correlate wins with winwire inbox evidence
 5. **Present:** Show the user the critical/warning/gap summary from the output
 
 > **Key benefit:** PBI payloads (~130+ rows) and CRM payloads (~hundreds of opps) never enter agent context. Agent only sees the ~50-line summary + exceptions.

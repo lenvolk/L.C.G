@@ -22,6 +22,8 @@
  *   --pipeline <path>   Classified pipeline JSON (from classify-sql-pipeline.js). Also accepts stdin.
  *   --crm <path>        CRM opportunities JSON (merged list_opportunities results).
  *                        Shape: { "opportunities": [...] } or [...] array.
+ *   --previous <path>   Previous classified/audit JSON to detect commitment transitions.
+ *   --mail <path>       Optional normalized mail JSON (from normalize-mail.js) for winwire correlation.
  *   --format <fmt>      Output format: "json" (default) or "md" (vault-ready markdown).
  *   --output <path>     Write output to file instead of stdout.
  *
@@ -36,6 +38,7 @@
  *     "generated": "2026-04-16",
  *     "critical": [...],   // Tier 1 SQL + wrong/missing salesplay
  *     "warning": [...],    // Tier 1 SQL + adjacent play, or Tier 2
+ *     "untaggedSalesProgram": [...], // Workload in Sales Program catalog + missing/Not Applicable salesplay
  *     "clean": [...],      // Tier 1 SQL + correct play
  *     "unmatched": [...],  // SQL opps in PBI but missing from CRM data
  *     "gapAccounts": [...], // Passed through from classified data
@@ -88,12 +91,16 @@ function classifySalesPlay(code, tier) {
 const args = process.argv.slice(2);
 let pipelineFile = null;
 let crmFile = null;
+let previousFile = null;
+let mailFile = null;
 let format = "json";
 let outputFile = null;
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--pipeline" && args[i + 1]) pipelineFile = args[++i];
   else if (args[i] === "--crm" && args[i + 1]) crmFile = args[++i];
+  else if (args[i] === "--previous" && args[i + 1]) previousFile = args[++i];
+  else if (args[i] === "--mail" && args[i + 1]) mailFile = args[++i];
   else if (args[i] === "--format" && args[i + 1]) format = args[++i];
   else if (args[i] === "--output" && args[i + 1]) outputFile = args[++i];
   else if (!args[i].startsWith("-")) pipelineFile = args[i];
@@ -109,6 +116,28 @@ if (pipelineFile) {
   pipelineRaw = Buffer.concat(chunks).toString("utf8");
 }
 const classified = JSON.parse(pipelineRaw);
+
+// ── Read previous snapshot (optional) ──────────────────────────────
+let previousData = null;
+if (previousFile) {
+  try {
+    previousData = JSON.parse(readFileSync(previousFile, "utf8"));
+  } catch {
+    previousData = null;
+  }
+}
+
+// ── Read normalized mail (optional) ────────────────────────────────
+let mailMessages = [];
+if (mailFile) {
+  try {
+    const parsed = JSON.parse(readFileSync(mailFile, "utf8"));
+    if (Array.isArray(parsed)) mailMessages = parsed;
+    else if (Array.isArray(parsed.messages)) mailMessages = parsed.messages;
+  } catch {
+    mailMessages = [];
+  }
+}
 
 // ── Read CRM data ───────────────────────────────────────────────────
 let crmOpps = [];
@@ -132,10 +161,20 @@ for (const opp of crmOpps) {
 const critical = [];
 const warning = [];
 const clean = [];
+const untaggedSalesProgram = [];
 const unmatched = [];
+const wins = [];
 
 // Deduplicate by oppId — same opp may appear in multiple pipeline rows
 const processedOppIds = new Set();
+
+function isMissingSalesProgramTag(salesPlayCode, salesPlayName) {
+  if (salesPlayCode == null || salesPlayCode === "") return true;
+  if (Number(salesPlayCode) === 861980040) return true; // Not Applicable
+  const lowerName = String(salesPlayName || "").toLowerCase();
+  if (lowerName.includes("not applicable")) return true;
+  return false;
+}
 
 for (const sqlOpp of classified.sqlOpps) {
   if (!sqlOpp.oppId) continue;
@@ -194,6 +233,21 @@ for (const sqlOpp of classified.sqlOpps) {
     expectedCode: 861980067,
   };
 
+  if (
+    sqlOpp.salesProgramCategory &&
+    isMissingSalesProgramTag(salesPlayCode, salesPlayName)
+  ) {
+    untaggedSalesProgram.push({
+      ...record,
+      salesProgramCategory: sqlOpp.salesProgramCategory,
+      reason:
+        "Milestone workload maps to Sales Program catalog, but opportunity sales play is missing/Not Applicable",
+    });
+  }
+
+  // Keep existing SQL600 severity flow focused to tiered SQL detections.
+  if (sqlOpp.tier === 0) continue;
+
   if (severity === "critical") critical.push(record);
   else if (severity === "warning") warning.push(record);
   else clean.push(record);
@@ -205,6 +259,119 @@ critical.sort(sortByPipe);
 warning.sort(sortByPipe);
 clean.sort(sortByPipe);
 
+// ── Win detection: uncommitted -> committed ────────────────────────
+
+function normalizeCommitment(value) {
+  if (value == null) return "unknown";
+  const v = String(value).toLowerCase();
+  if (!v.trim()) return "unknown";
+  if (v.includes("committed") && !v.includes("uncommitted")) return "committed";
+  if (v.includes("uncommitted")) return "uncommitted";
+  if (v.includes("pipeline")) return "pipeline";
+  if (v.includes("not started")) return "uncommitted";
+  return "other";
+}
+
+function betterState(a, b) {
+  const rank = {
+    committed: 4,
+    uncommitted: 3,
+    pipeline: 2,
+    other: 1,
+    unknown: 0,
+  };
+  return rank[a] >= rank[b] ? a : b;
+}
+
+function buildCommitmentMap(source) {
+  const map = new Map();
+  if (!source || !Array.isArray(source.sqlOpps)) return map;
+  for (const row of source.sqlOpps) {
+    const id = (row.oppId || "").toLowerCase();
+    if (!id) continue;
+    const next = normalizeCommitment(row.commitment);
+    const prev = map.get(id) || "unknown";
+    map.set(id, betterState(prev, next));
+  }
+  return map;
+}
+
+const currentCommitmentByOpp = buildCommitmentMap(classified);
+const previousCommitmentByOpp = buildCommitmentMap(previousData);
+
+function lower(s) {
+  return String(s || "").toLowerCase();
+}
+
+function tokenizeName(s) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length >= 4)
+    .slice(0, 6);
+}
+
+function isWinwireMessage(msg) {
+  const blob = `${lower(msg.subject)} ${lower(msg.snippet)}`;
+  return (
+    blob.includes("winwire") ||
+    blob.includes("win wire") ||
+    blob.includes("win-wire") ||
+    blob.includes("closed won") ||
+    blob.includes("deal won")
+  );
+}
+
+const candidateWinwireMail = mailMessages.filter(isWinwireMessage);
+
+function correlateWinwire(win) {
+  const acctTokens = tokenizeName(win.account);
+  const oppTokens = tokenizeName(win.oppName);
+  const matches = [];
+
+  for (const msg of candidateWinwireMail) {
+    const blob = `${lower(msg.subject)} ${lower(msg.snippet)}`;
+    const acctMatch = acctTokens.some((t) => blob.includes(t));
+    const oppMatch = oppTokens.some((t) => blob.includes(t));
+    if (acctMatch || oppMatch) {
+      matches.push({
+        subject: msg.subject || "(no subject)",
+        webLink: msg.webLink || "",
+        received: msg.received || "",
+      });
+    }
+  }
+
+  matches.sort((a, b) => new Date(b.received) - new Date(a.received));
+  return matches.slice(0, 3);
+}
+
+for (const row of [...critical, ...warning, ...clean]) {
+  const id = lower(row.oppId);
+  if (!id) continue;
+  const previousCommitment = previousCommitmentByOpp.get(id) || "unknown";
+  const currentCommitment = currentCommitmentByOpp.get(id) || "unknown";
+
+  if (previousCommitment === "uncommitted" && currentCommitment === "committed") {
+    const win = {
+      oppId: row.oppId,
+      oppName: row.oppName,
+      account: row.account,
+      owner: row.owner,
+      stage: row.stage,
+      pipeACR: row.pipeACR,
+      oppLink: row.oppLink,
+      fromCommitment: previousCommitment,
+      toCommitment: currentCommitment,
+      winwireMatches: correlateWinwire(row),
+    };
+    wins.push(win);
+  }
+}
+
+wins.sort(sortByPipe);
+
 // ── Summary ─────────────────────────────────────────────────────────
 
 const summary = {
@@ -213,7 +380,10 @@ const summary = {
   totalAccounts: classified.totalAccounts || 0,
   criticalCount: critical.length,
   warningCount: warning.length,
+  untaggedSalesProgramCount: untaggedSalesProgram.length,
   cleanCount: clean.length,
+  winCount: wins.length,
+  winwireLinkedCount: wins.filter((w) => w.winwireMatches.length > 0).length,
   unmatchedCount: unmatched.length,
   gapAccountCount: (classified.gapAccounts || []).length,
   totalSqlCoresInGap: (classified.summary || {}).totalSqlCoresInGap || 0,
@@ -226,7 +396,9 @@ const result = {
   ...summary,
   critical,
   warning,
+  untaggedSalesProgram,
   clean,
+  wins,
   unmatched,
   gapAccounts: classified.gapAccounts || [],
 };
@@ -278,6 +450,9 @@ function generateMarkdown() {
   lines.push(`total_accounts_scanned: ${summary.totalAccounts}`);
   lines.push(`critical_count: ${summary.criticalCount}`);
   lines.push(`warning_count: ${summary.warningCount}`);
+  lines.push(`untagged_sales_program_count: ${summary.untaggedSalesProgramCount}`);
+  lines.push(`win_count: ${summary.winCount}`);
+  lines.push(`winwire_linked_count: ${summary.winwireLinkedCount}`);
   lines.push(`gap_account_count: ${summary.gapAccountCount}`);
   lines.push(`clean_count: ${summary.cleanCount}`);
   lines.push("---");
@@ -288,11 +463,41 @@ function generateMarkdown() {
     `**Scope:** ${summary.totalAccounts} SQL600 HLS accounts scanned`
   );
   lines.push(
-    `**Results:** 🔴 ${summary.criticalCount} Critical · 🟡 ${summary.warningCount} Warning · ⚪ ${summary.gapAccountCount} Gap Accounts · ✅ ${summary.cleanCount} Clean`
+    `**Results:** 🔴 ${summary.criticalCount} Critical · 🟡 ${summary.warningCount} Warning · 🧭 ${summary.untaggedSalesProgramCount} Untagged Program · 🏆 ${summary.winCount} Wins · ⚪ ${summary.gapAccountCount} Gap Accounts · ✅ ${summary.cleanCount} Clean`
   );
   if (summary.unmatchedCount > 0) {
     lines.push(
       `**CRM Coverage:** ${summary.crmCoverage} opps matched (${summary.unmatchedCount} unmatched — need targeted CRM lookup)`
+    );
+  }
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+
+  // ── Wins ──
+  lines.push("## 🏆 Wins — Uncommitted -> Committed");
+  lines.push("");
+  if (wins.length === 0) {
+    lines.push("None detected in this run (or no previous snapshot provided).");
+  } else {
+    lines.push(
+      "| Account | Opportunity | Owner | Stage | Pipeline ACR | Winwire Evidence |"
+    );
+    lines.push("|---|---|---|---|---|---|");
+    for (const w of wins) {
+      const oppCell = mdLink(w.oppName, w.oppLink);
+      const winwireCell = w.winwireMatches.length
+        ? w.winwireMatches
+            .map((m) => mdLink(m.subject, m.webLink))
+            .join("<br>")
+        : "—";
+      lines.push(
+        `| **${esc(w.account)}** | ${oppCell} | ${esc(w.owner)} | ${esc(w.stage)} | ${fmtDollar(w.pipeACR)} | ${winwireCell} |`
+      );
+    }
+    lines.push("");
+    lines.push(
+      `> **Winwire correlation:** ${summary.winwireLinkedCount}/${summary.winCount} wins have matching inbox evidence.`
     );
   }
   lines.push("");
@@ -345,6 +550,32 @@ function generateMarkdown() {
         `| **${esc(r.account)}** | ${oppCell} | ${esc(r.salesPlayName) || "—"} | ${esc(r.workload)} | ${esc(r.stage)} | ${fmtDollar(r.pipeACR)} |`
       );
     }
+  }
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+
+  // ── Untagged Sales Program ──
+  lines.push("## 🧭 Untagged Sales Program — Workload Mapped, Sales Play Missing");
+  lines.push("");
+  if (untaggedSalesProgram.length === 0) {
+    lines.push("None detected.");
+  } else {
+    lines.push(
+      "| Account | Opportunity | Sales Program Category | Workload | Current Sales Play | Owner |"
+    );
+    lines.push("|---|---|---|---|---|---|");
+    for (const r of untaggedSalesProgram) {
+      const playLabel = r.salesPlayName ? esc(r.salesPlayName) : "❌ MISSING";
+      const oppCell = mdLink(r.oppName, r.oppLink);
+      lines.push(
+        `| **${esc(r.account)}** | ${oppCell} | ${esc(r.salesProgramCategory)} | ${esc(r.workload)} | ${playLabel} | ${esc(r.owner)} |`
+      );
+    }
+    lines.push("");
+    lines.push(
+      "> **Action:** Catalyst v-team outreach: coach sellers/SEs to set the opportunity Sales Play to the appropriate program-aligned value before governance review."
+    );
   }
   lines.push("");
   lines.push("---");
@@ -415,6 +646,12 @@ function generateMarkdown() {
   );
   lines.push(
     "- **CRM Cross-ref:** `msp_salesplay` on opportunity entity"
+  );
+  lines.push(
+    "- **Win Detection:** compare previous vs current milestone commitment state on each opportunity (`uncommitted` -> `committed`)"
+  );
+  lines.push(
+    "- **Winwire Correlation:** optional matching against normalized inbox messages (`normalize-mail.js`) using winwire keywords + account/opportunity token overlap"
   );
   lines.push(
     '- **SQL Workload Detection:** Tier 1 = workload starts with "Data: SQL" or contains Sybase/Oracle migration; Tier 2 = MySQL/PostgreSQL'

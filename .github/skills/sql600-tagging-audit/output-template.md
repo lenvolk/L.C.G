@@ -29,6 +29,8 @@ audit_mode: "<Full|MismatchOnly|GapOnly|AccountDrill>"
 total_accounts_scanned: <int>
 critical_count: <int>
 warning_count: <int>
+win_count: <int>
+winwire_linked_count: <int>
 gap_account_count: <int>
 clean_count: <int>
 ---
@@ -40,7 +42,7 @@ clean_count: <int>
 # SQL600 Sales Play Tagging Audit — <Month Day, Year>
 
 **Scope:** <total_accounts_scanned> SQL600 HLS accounts scanned
-**Results:** 🔴 <critical_count> Critical · 🟡 <warning_count> Warning · ⚪ <gap_account_count> Gap Accounts · ✅ <clean_count> Clean
+**Results:** 🔴 <critical_count> Critical · 🟡 <warning_count> Warning · 🏆 <win_count> Wins · ⚪ <gap_account_count> Gap Accounts · ✅ <clean_count> Clean
 
 ---
 
@@ -63,6 +65,18 @@ Opportunities with SQL workloads tagged to a related but non-ideal sales play. R
 | Account | Opportunity | Current Sales Play | Workload | Stage | Monthly Pipeline |
 |---|---|---|---|---|---|
 | **<TopParent>** | [<OppName>](<OpportunityLink>) | <current_play> | <MilestoneWorkload> | <Stage> | <MonthlyUse> |
+
+---
+
+## 🏆 Wins — Uncommitted -> Committed
+
+Opportunities/customers where commitment changed from uncommitted to committed versus the previous audit snapshot.
+
+| Account | Opportunity | Owner | Stage | Pipeline ACR | Winwire Evidence |
+|---|---|---|---|---|---|
+| **<TopParent>** | [<OppName>](<OpportunityLink>) | <Owner> | <Stage> | <PipeACR> | [<Winwire Subject>](<webLink>) |
+
+> **Winwire correlation:** <winwire_linked_count>/<win_count> wins have matching inbox evidence.
 
 ---
 
@@ -100,6 +114,7 @@ SQL600 HLS accounts with on-prem SQL footprint (`SQL Cores > 0`) but no active S
 |---|---|
 | 🔴 Critical | Show "None detected. All SQL-workload opps have correct sales play." |
 | 🟡 Warning | Show "None detected." |
+| 🏆 Wins | Show "None detected in this run (or no previous snapshot provided)." |
 | ⚪ Gap Accounts | Show "None detected. All SQL600 HLS accounts have SQL pipeline coverage." |
 | ✅ Clean | Always show count. Only list details in Account Drill mode. |
 

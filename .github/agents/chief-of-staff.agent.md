@@ -7,8 +7,9 @@ tools: [
   agent, 
   edit, 
   search,
-  'msx/*', 
-  'oil/*'
+  workiq/*,
+  msx/*, 
+  oil/*
 ]
 agents: ["*"]
 

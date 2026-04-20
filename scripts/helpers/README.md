@@ -11,7 +11,9 @@ Reusable Node.js CLI scripts for normalizing, scoring, and formatting M365 data 
 | `normalize-mail.js` | Normalize raw `SearchMessages` JSON | MCP mail JSON | Compact mail items + summary |
 | `build-workiq-query.js` | Build properly scoped WorkIQ prompts | CLI flags | Structured query text |
 | `classify-sql-pipeline.js` | Classify PBI SQL600 pipeline by workload tier | PBI Q1+Q2 JSON | Tiered SQL opps + gap accounts |
-| `audit-sales-play.js` | Cross-ref classified pipeline with CRM sales play | Classified JSON + CRM JSON | Exception report (JSON or Markdown) |
+| `audit-sales-play.js` | Cross-ref classified pipeline with CRM sales play + detect wins | Classified JSON + CRM JSON (+ optional previous + normalized mail) | Exception report (JSON or Markdown) with wins |
+| `generate-next-steps.js` | LLM-generated SQL modernization next steps per account | SQL600 data JSON (post-enrich) | Mutated JSON with `NextStep` per account + `_aiInsight.modernizationOutlook` |
+| `resolve-deal-teams.js` | Join CRM bulk data into compact account summaries with named deal team roles and risk signals | Combined CRM JSON (opps + deal teams + milestones + systemusers) | Grouped accounts with resolved names, signals, summary |
 
 ## Common Workflow
 
@@ -69,7 +71,36 @@ node scripts/helpers/classify-sql-pipeline.js /tmp/sql600-pipeline-$DATE.json \
 # 4. Cross-reference sales plays and produce audit report
 node scripts/helpers/audit-sales-play.js \
   --pipeline /tmp/sql600-classified-$DATE.json \
+  --previous /tmp/sql600-classified-$PREV_DATE.json \
   --crm /tmp/sql600-crm-$DATE.json \
+  --mail /tmp/mail-normalized-$DATE.json \
   --format md \
   --output /tmp/sql600-audit-$DATE.md
+
+# --previous detects uncommitted -> committed transitions (wins)
+# --mail correlates wins to possible winwire inbox evidence
+```
+
+### Engagement Intake (deal team resolution)
+```bash
+DATE=$(date +%F)
+
+# 1. Agent bulk-fetches from CRM (3 stages):
+#    Stage A: get_my_active_opportunities → all opps
+#    Stage B: manage_deal_team per opp (5 concurrent) + get_milestones (batches of 10)
+#    Stage C: crm_query on systemusers (OR-chain 15 GUIDs, all parallel)
+#    Agent saves combined result:
+#    { "opportunities": [...], "dealTeams": {"<oppId>": [...]}, "milestones": [...], "systemusers": [...] }
+
+# 2. Join deal teams + compute signals (no API calls, instant)
+node scripts/helpers/resolve-deal-teams.js /tmp/intake-opps-$DATE.json \
+  > /tmp/intake-resolved-$DATE.json
+
+# 3. Agent reads compact output (~50 lines for 43 accounts)
+#    Applies engagement-routing-rules.md per account
+#    Formats per next-steps-output-shape.md
+
+# Filter options:
+node scripts/helpers/resolve-deal-teams.js /tmp/intake-opps-$DATE.json --filter gap     # zero-pipeline only
+node scripts/helpers/resolve-deal-teams.js /tmp/intake-opps-$DATE.json --filter at-risk  # at-risk only
 ```

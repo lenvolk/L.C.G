@@ -1,10 +1,10 @@
 # L.C.G Skill Index
 
-**35 skills** organized by domain. Updated 2026-04-16.
+**37 skills** organized by domain. Updated 2026-04-20.
 
 ---
 
-## User-Facing Skills (24)
+## User-Facing Skills (25)
 
 ### deal-* — CRM / Deal Lifecycle
 
@@ -22,6 +22,12 @@
 | `deal-outcome-scoping` | KPI/success-plan workshops during early engagement |
 | `deal-value-realization` | Post-delivery outcome measurement and ROI evidence |
 | `deal-unified-check` | Unified Support dispatch readiness and accreditation validation |
+
+### engagement-* — SE Operations
+
+| Skill | Purpose |
+|---|---|
+| `engagement-intake` | SE front-door for technical engagement requests: qualifies, resolves deal team, routes to named people with next steps |
 
 ### powerbi-* — Power BI Analytics
 
@@ -84,6 +90,19 @@
 
 ---
 
+## Shared Policy Packs
+
+> Located in `_shared/`. Not discoverable skills — loaded by workflows and role lenses via `read_file`.
+
+| Pack | Purpose |
+|---|---|
+| `engagement-routing-rules.md` | SE front-door qualification criteria + routing decision matrix |
+| `next-steps-output-shape.md` | Action-oriented output format: next steps first, context second |
+| `sql-modernization-lens.md` | SQL modernization as AI front door: positioning rules, gap account framing |
+| `sql600-detection-rules.md` | SQL workload patterns + expected sales play values (cross-role reference) |
+
+---
+
 ## Developer Skills (4)
 
 > Prefixed with `dev-`. These serve skill developers and platform builders.
@@ -126,3 +145,5 @@
 | Manage Outlook rules | `triage-outlook-rules` |
 | Search meetings / channels / email | `m365-search` |
 | Build a vault dashboard | `dashboard-obsidian` |
+| Route a technical engagement request | `engagement-intake` |
+| Who should handle this customer request? | `engagement-intake` |
