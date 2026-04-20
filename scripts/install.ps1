@@ -96,7 +96,7 @@ if ($dirLower -match 'onedrive|dropbox|google drive|icloud') {
   Write-Host ''
   Write-Host 'Choose a non-synced directory instead:' -ForegroundColor Cyan
   Write-Host '  ... | iex; Install-LCG -Dir "$HOME\L.C.G"' -ForegroundColor Cyan
-  exit 1
+  return 1
 }
 
 if ((Test-Path $Dir) -and -not $Force) {
@@ -138,12 +138,16 @@ try {
   # Ensure execution policy allows running the bootstrap script in this process
   # (avoids hardcoding 'powershell' vs 'pwsh' and spawning a mismatched engine).
   Set-ExecutionPolicy -Scope Process Bypass -Force -ErrorAction SilentlyContinue
+  $bootstrapCode = 0
   if ($BootstrapArgs) {
-    & .\scripts\bootstrap.ps1 @BootstrapArgs
+    $bootstrapCode = & .\scripts\bootstrap.ps1 @BootstrapArgs
   } else {
-    & .\scripts\bootstrap.ps1
+    $bootstrapCode = & .\scripts\bootstrap.ps1
   }
-  exit $LASTEXITCODE
+  if ($null -eq $bootstrapCode) {
+    $bootstrapCode = 0
+  }
+  return [int]$bootstrapCode
 }
 finally {
   if (Test-Path $tempRoot) {

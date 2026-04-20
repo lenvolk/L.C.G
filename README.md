@@ -58,7 +58,7 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 & ([ScriptBlock]::Create((irm https://raw.githubusercontent.com/JinLee794/L.C.G/<branch>/scripts/install.ps1))) -Ref <branch>
 ```
 
-The installer creates `L.C.G/` in your current directory and runs the bootstrap automatically. Follow any prompts that appear.
+The installer creates `L.C.G/` in your current directory and runs the bootstrap automatically. Run it from an already-open PowerShell window so prompts and any errors remain visible.
 
 ---
 
