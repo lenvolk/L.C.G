@@ -36,6 +36,9 @@ temp/
 # Local agent memory (untracked)
 .agent-memory/
 
+# Local Obsidian vault scaffolded by bootstrap (never commit)
+.vault/
+
 .vscode/mcp.json
 .copilot
 

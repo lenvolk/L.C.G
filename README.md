@@ -69,36 +69,61 @@ brew install git gh
 **macOS / Linux:**
 
 ```bash
-gh auth login && gh repo clone JinLee794/L.C.G && cd L.C.G && ./scripts/bootstrap.sh --skip-clone
+gh repo clone JinLee794/L.C.G && cd L.C.G && ./scripts/bootstrap.sh
 ```
 
 **Windows (PowerShell 7 — the window opened in Step 0):**
 
 ```powershell
-gh auth login; gh repo clone JinLee794/L.C.G; cd L.C.G; Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force; .\scripts\bootstrap.ps1 -SkipClone
+gh repo clone JinLee794/L.C.G; cd L.C.G; Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force; .\scripts\bootstrap.ps1
 ```
 
-The bootstrap script installs VS Code, Node.js 18+, Azure CLI, the Copilot extension, configures GitHub Packages auth, signs you in to Azure, and opens VS Code.
+The bootstrap script installs Node.js 18+ (if missing), `npm install`s the project, configures GitHub Packages auth, scaffolds a local Obsidian vault at `.vault/`, writes a gitignored `.env`, and registers the `mcaps` CLI globally via `npm link`.
+
+> [!IMPORTANT]
+> **The bootstrap is interactive.** You will be prompted to:
+> 1. Type `yes` to accept the AI / MCP security policy.
+> 2. Sign in to GitHub via device code — press **Enter** in the terminal when prompted to open the browser, then paste the displayed code at <https://github.com/login/device>. Use your **personal** GitHub account, not an EMU (`*_microsoft`) account.
+> 3. Press **Enter** to accept the default local vault path (or paste a path to an existing Obsidian vault).
 
 > [!NOTE]
 > **If you have an existing Node.js installation**, make sure it is up-to-date (v18+) so that `npx` works correctly. The bootstrap script installs Node if missing, but won't upgrade an existing outdated installation. Run `node --version` to check.
 
 > [!TIP]
-> Just want to check what's missing? Run with `--check-only` (macOS/Linux) or `-CheckOnly` (Windows) to see a report without installing anything.
+> Just want to check what's missing? Run with `--check-only` (macOS/Linux) or `-Check` (Windows) to see a report without installing anything.
 
-### Step 2: Start using L.C.G.
+### Step 2: Sign in to Azure
 
-The bootstrap script opens VS Code and installs the `lcg` terminal command automatically. You're ready to go — pick either path:
+The MSX-CRM and WorkIQ MCP servers authenticate via Azure CLI. Install it if you don't already have it, then sign in:
 
-**VS Code (recommended for most users):**
+```powershell
+winget install --id Microsoft.AzureCLI --source winget   # Windows, first time only
+az login
+```
 
-In VS Code, open **Copilot Chat** (sidebar icon or `⌃⌘I` / `Ctrl+Alt+I`) → select the **Chief of Staff** agent → start typing.
+```bash
+brew install azure-cli   # macOS, first time only
+az login
+```
 
-**Terminal:**
+### Step 3: Open the repo in VS Code
 
-Open any terminal and type `lcg` to start an interactive session.
+```powershell
+code .
+```
 
-> Both interfaces are fully equivalent — same agents, skills, and MCP servers. See [Two Ways to Use L.C.G.](#two-ways-to-use-lcg) for details.
+VS Code auto-starts the MCP servers declared in `.vscode/mcp.json`. Open **Copilot Chat** (`⌃⌘I` / `Ctrl+Alt+I`), select the **Chief of Staff** agent, and start typing.
+
+**Optional — use the terminal CLI:**
+
+The bootstrap registers `mcaps` globally via `npm link`. **Open a new terminal** (existing terminals don't yet have `%APPDATA%\npm` on PATH) and run:
+
+```powershell
+mcaps list               # see available automations
+mcaps morning-triage     # run a task directly
+```
+
+> Both interfaces share the same agents, skills, and MCP servers.
 
 ---
 

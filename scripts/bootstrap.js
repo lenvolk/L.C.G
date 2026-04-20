@@ -61,7 +61,17 @@ function version(cmd, flag = "--version") {
 }
 
 function run(cmd, cmdArgs, opts = {}) {
-  const r = spawnSync(cmd, cmdArgs, { stdio: "inherit", cwd: ROOT, shell: isWin, ...opts });
+  // When invoking via shell on Windows, quote any arg containing spaces
+  // (e.g. process.execPath = "C:\Program Files\nodejs\node.exe").
+  const useShell = opts.shell ?? isWin;
+  let finalCmd = cmd;
+  let finalArgs = cmdArgs;
+  if (useShell && isWin) {
+    const q = (s) => (/\s/.test(s) && !s.startsWith('"')) ? `"${s}"` : s;
+    finalCmd = q(cmd);
+    finalArgs = cmdArgs.map(q);
+  }
+  const r = spawnSync(finalCmd, finalArgs, { stdio: "inherit", cwd: ROOT, shell: useShell, ...opts });
   return r.status ?? 1;
 }
 

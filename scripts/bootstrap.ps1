@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Cross-platform entry point for first-time setup on Windows.
 
