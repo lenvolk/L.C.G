@@ -46,7 +46,9 @@ brew install git gh
 winget install --id Microsoft.PowerShell --source winget; winget install Git.Git GitHub.cli; Start-Process pwsh -ArgumentList @('-NoExit', '-Command', '$env:PATH+=\";C:\Program Files\Git\cmd;C:\Program Files\GitHub CLI\"; Write-Host \"PowerShell 7 ready - continue with Step 1\" -ForegroundColor Green')
 ```
 
-This installs PowerShell 7, Git, and GitHub CLI in one shot, then opens a new **PowerShell 7** window with the tools on PATH. Continue from that new window.
+Paste the command above into the default **Windows PowerShell 5** console. It installs all required dependencies — including PowerShell 7, Git, and GitHub CLI — and, once installation completes, automatically launches a new **PowerShell 7** window with the tools already on PATH (as shown below). Continue from that new window.
+
+![Windows PowerShell 5 bootstrap launching PowerShell 7](image/README/powershell-bootstrap.png)
 
 > [!NOTE]
 > If you install Git or `gh` while VS Code is already open, **close and reopen VS Code entirely**. VS Code terminals inherit the system PATH from launch — newly installed tools won't be visible until you restart.
