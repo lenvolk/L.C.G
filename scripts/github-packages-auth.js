@@ -14,8 +14,9 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline";
 
-const ROOT = resolve(import.meta.dirname, "..");
+const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 export const NPMRC_PATH = resolve(homedir(), ".npmrc");
+const COPILOT_CHAT_SHORTCUT = process.platform === "win32" ? "Ctrl+Shift+I" : "Cmd+Shift+I";
 
 const HOST = "github.com";
 const REGISTRY = "https://npm.pkg.github.com";
@@ -348,7 +349,7 @@ export async function ensureGithubPackagesAuth(options = {}) {
   if (!hasGhCli()) {
     await tryInstallGhCli();
     if (!hasGhCli()) {
-      throw new Error("GitHub CLI (gh) is still not available. Open Copilot Chat (Cmd+Shift+I) and ask: 'Help me debug my MCP package auth setup'");
+      throw new Error(`GitHub CLI (gh) is still not available. Open Copilot Chat (${COPILOT_CHAT_SHORTCUT}) and ask: 'Help me debug my MCP package auth setup'`);
     }
   }
 
@@ -370,7 +371,7 @@ export async function ensureGithubPackagesAuth(options = {}) {
     account = await promptAccountChoice(accounts);
   }
   if (!account) {
-    throw new Error("No GitHub account with read:packages found after login. Open Copilot Chat and ask: 'Help me debug my MCP package auth setup'");
+    throw new Error(`No GitHub account with read:packages found after login. Open Copilot Chat (${COPILOT_CHAT_SHORTCUT}) and ask: 'Help me debug my MCP package auth setup'`);
   }
 
   // ── Step 4: Write ~/.npmrc and re-verify ──────────────────────
@@ -410,7 +411,7 @@ export async function ensureGithubPackagesAuth(options = {}) {
     }
     process.stderr.write("\n");
     process.stderr.write("  \x1b[1m\x1b[36m┌──────────────────────────────────────────────────────────┐\x1b[0m\n");
-    process.stderr.write("  \x1b[1m\x1b[36m│  Still stuck? Open Copilot Chat (Ctrl+Shift+I) and ask: │\x1b[0m\n");
+    process.stderr.write(`  \x1b[1m\x1b[36m│  Still stuck? Open Copilot Chat (${COPILOT_CHAT_SHORTCUT}) and ask: │\x1b[0m\n`);
     process.stderr.write("  \x1b[1m\x1b[36m│                                                          │\x1b[0m\n");
     process.stderr.write("  \x1b[1m\x1b[36m│    \"Help me debug my MCP package auth setup\"             │\x1b[0m\n");
     process.stderr.write("  \x1b[1m\x1b[36m│                                                          │\x1b[0m\n");

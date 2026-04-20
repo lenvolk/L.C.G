@@ -55,6 +55,7 @@ const PREREQS = [
 
 // ── helpers ─────────────────────────────────────────────────────────
 const isWindows = process.platform === "win32";
+const copilotChatShortcut = isWindows ? "Ctrl+Shift+I" : "Cmd+Shift+I";
 
 function run(cmd, cwd) {
   execSync(cmd, {
@@ -509,7 +510,7 @@ if (checkMode) {
     } catch (err) {
       warn(err.message);
       warn("You can retry later with: npm run auth:packages");
-      warn("Or open Copilot Chat (Cmd+Shift+I) and ask: 'Help me debug my MCP package auth setup'");
+      warn(`Or open Copilot Chat (${copilotChatShortcut}) and ask: 'Help me debug my MCP package auth setup'`);
     }
 
     await configureEnv();
@@ -553,7 +554,7 @@ if (checkMode) {
   Next steps:
     1. Open this repo in VS Code:  code .
     2. MCP servers auto-start via .vscode/mcp.json
-    3. Open Copilot chat (Cmd+Shift+I) and try: "Who am I in MSX?"
+    3. Open Copilot chat (${copilotChatShortcut}) and try: "Who am I in MSX?"
     4. Or just run 'mcaps' from any terminal!
 `);
     } else {
@@ -563,7 +564,7 @@ if (checkMode) {
     2. Sign in to Azure:        az login
     3. Open this repo in VS Code:  code .
     4. MCP servers auto-start via .vscode/mcp.json
-    5. Open Copilot chat (Cmd+Shift+I) and try: "Who am I in MSX?"
+    5. Open Copilot chat (${copilotChatShortcut}) and try: "Who am I in MSX?"
     6. Or just run 'mcaps' from any terminal!
 `);
     }

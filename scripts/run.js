@@ -27,10 +27,9 @@
 
 import { resolve, join } from "node:path";
 import { existsSync, readdirSync } from "node:fs";
-import { pathToFileURL } from "node:url";
-import { runTask } from "./lib/runner.js";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const TASKS_DIR = resolve(import.meta.dirname, "tasks");
+const TASKS_DIR = resolve(fileURLToPath(new URL(".", import.meta.url)), "tasks");
 
 // ── Parse CLI args ──────────────────────────────────────────────────
 const args = process.argv.slice(2);
@@ -127,6 +126,15 @@ if (task.customRun) {
   const { log } = createLogger(task.name, vaultDir, date);
   const exitCode = await task.customRun({ date, vaultDir, log, overrides });
   process.exit(exitCode);
+}
+
+let runTask;
+try {
+  ({ runTask } = await import("./lib/runner.js"));
+} catch (err) {
+  console.error("Task runner module is missing: scripts/lib/runner.js");
+  console.error("Run `node scripts/bootstrap.js --check` to verify setup, or restore missing files in scripts/lib/.");
+  process.exit(1);
 }
 
 const exitCode = await runTask(task, overrides);

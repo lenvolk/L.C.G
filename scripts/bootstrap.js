@@ -147,9 +147,21 @@ if (!SKIP_INSTALL) {
     fail("package.json not found — are you running this from inside the repo?");
     process.exit(1);
   }
-  const rc = run("npm", ["install"]);
+  // Network blips on fresh VMs are common for the first install.
+  // Retry once with a longer fetch-retry window before giving up.
+  const npmArgs = [
+    "install",
+    "--fetch-retries=5",
+    "--fetch-retry-mintimeout=10000",
+    "--fetch-retry-maxtimeout=120000",
+  ];
+  let rc = run("npm", npmArgs);
   if (rc !== 0) {
-    fail("npm install failed");
+    warn("npm install failed — retrying once…");
+    rc = run("npm", npmArgs);
+  }
+  if (rc !== 0) {
+    fail("npm install failed (after retry)");
     process.exit(rc);
   }
   ok("Dependencies installed");

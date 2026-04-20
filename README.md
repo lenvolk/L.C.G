@@ -32,7 +32,7 @@ Before you begin, make sure you have:
 ### Step 0: Install Prerequisites
 
 > [!IMPORTANT]
-> **Git, GitHub CLI, and (on Windows) PowerShell 7 are the only tools you need to install manually.** Everything else (VS Code, Node.js, Azure CLI) is handled by the bootstrap script in Step 2.
+> **Git, GitHub CLI, VS Code, and (on Windows) PowerShell 7 are installed up front in Step 0.** The bootstrap script in Step 2 handles Node.js and Azure CLI.
 
 **macOS / Linux:**
 
@@ -49,10 +49,10 @@ brew install git gh
 2. Paste the following single line into that terminal and press Enter:
 
    ```powershell
-   winget install --id Microsoft.PowerShell --source winget; winget install Git.Git GitHub.cli; Start-Process pwsh -ArgumentList @('-NoExit', '-Command', '$env:PATH+=\";C:\Program Files\Git\cmd;C:\Program Files\GitHub CLI\"; Write-Host \"PowerShell 7 ready - continue with Step 1\" -ForegroundColor Green')
+   winget install --id Microsoft.PowerShell --source winget; winget install Git.Git GitHub.cli Microsoft.VisualStudioCode; Start-Process pwsh -ArgumentList @('-NoExit', '-Command', '$env:PATH+=\";C:\Program Files\Git\cmd;C:\Program Files\GitHub CLI;C:\Program Files\Microsoft VS Code\bin\"; Write-Host \"PowerShell 7 ready - continue with Step 1\" -ForegroundColor Green')
    ```
 
-   This command installs all required dependencies — including PowerShell 7, Git, and GitHub CLI — and, once installation completes, automatically launches a new **PowerShell 7** window with the tools already on PATH (as shown below). Continue from that new window.
+   This command installs all required dependencies — including PowerShell 7, Git, GitHub CLI, and VS Code — and, once installation completes, automatically launches a new **PowerShell 7** window with the tools already on PATH (as shown below). Continue from that new window.
 
    ![Windows PowerShell 5 bootstrap launching PowerShell 7](docs/PS7installed.png)
 
@@ -113,17 +113,6 @@ code .
 ```
 
 VS Code auto-starts the MCP servers declared in `.vscode/mcp.json`. Open **Copilot Chat** (`⌃⌘I` / `Ctrl+Alt+I`), select the **Chief of Staff** agent, and start typing.
-
-**Optional — use the terminal CLI:**
-
-The bootstrap registers `mcaps` globally via `npm link`. **Open a new terminal** (existing terminals don't yet have `%APPDATA%\npm` on PATH) and run:
-
-```powershell
-mcaps list               # see available automations
-mcaps morning-triage     # run a task directly
-```
-
-> Both interfaces share the same agents, skills, and MCP servers.
 
 ---
 
