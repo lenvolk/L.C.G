@@ -97,7 +97,10 @@ if (has("git")) {
 
 // Azure CLI (optional)
 if (has("az")) {
-  ok(version("az", "version") || "Azure CLI");
+  const azRaw = version("az", "version");
+  // `az version` outputs JSON; extract the azure-cli value.
+  const azVer = azRaw?.match(/"azure-cli":\s*"([^"]+)"/)?.[1] || azRaw?.replace(/[{}\s]/g, "") || "Azure CLI";
+  ok(`Azure CLI ${azVer}`);
 } else {
   warn("Azure CLI (`az`) not found — required for MSX-CRM + WorkIQ tools at runtime");
   info("Install: https://learn.microsoft.com/cli/azure/install-azure-cli");

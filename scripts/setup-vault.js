@@ -144,7 +144,7 @@ export function scaffoldVault(vaultPath, opts = {}) {
 
   for (const folder of VAULT_FOLDERS) {
     const target = join(vaultRoot, folder);
-    assertWithinVault(target, vaultRoot);
+    assertWithinVault(vaultRoot, target);
     if (existsSync(target)) {
       existed.push(folder);
     } else {
