@@ -81,7 +81,19 @@ Write-Info "Using ref '$Ref'."
 
 $archiveUrl = "https://codeload.github.com/$repoOwner/$repoName/zip/refs/heads/$Ref"
 
+$dirWasExplicit = $PSBoundParameters.ContainsKey('Dir')
 $Dir = [System.IO.Path]::GetFullPath($Dir)
+
+if (-not $dirWasExplicit) {
+  $windowsRoot = [Environment]::GetFolderPath('Windows')
+  if (-not [string]::IsNullOrWhiteSpace($windowsRoot) -and
+      $Dir.StartsWith($windowsRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+    $fallbackDir = Join-Path $HOME 'L.C.G'
+    Write-Info "Default install path '$Dir' is under the Windows system directory."
+    Write-Info "Using '$fallbackDir' instead."
+    $Dir = [System.IO.Path]::GetFullPath($fallbackDir)
+  }
+}
 
 # Block installation into cloud-synced directories (credentials would sync to the cloud).
 $dirLower = $Dir.ToLower()
