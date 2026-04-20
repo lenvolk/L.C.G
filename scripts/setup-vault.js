@@ -208,7 +208,7 @@ export function seedStarter(vaultPath, opts = {}) {
     if (entry.isDirectory()) {
       const srcDir = join(STARTER_DIR, entry.name);
       const destDir = join(vaultRoot, entry.name);
-      assertWithinVault(destDir, vaultRoot);
+      assertWithinVault(vaultRoot, destDir);
 
       const files = walkFiles(srcDir);
 
@@ -256,7 +256,7 @@ export function syncSidekick(vaultPath, opts = {}) {
   for (const { src, dest } of SYNC_MAP) {
     const srcDir = join(ROOT, src);
     const destDir = join(vaultRoot, dest);
-    assertWithinVault(destDir, vaultRoot);
+    assertWithinVault(vaultRoot, destDir);
 
     if (!existsSync(srcDir)) {
       skipped.push(`${src} (source missing)`);
@@ -314,7 +314,7 @@ export function syncStarterConfigs(vaultPath, opts = {}) {
   for (const { src, dest } of STARTER_SYNC_MAP) {
     const srcDir = join(ROOT, src);
     const destDir = join(vaultRoot, dest);
-    assertWithinVault(destDir, vaultRoot);
+    assertWithinVault(vaultRoot, destDir);
 
     if (!existsSync(srcDir)) {
       skipped.push(`${src} (source missing)`);
