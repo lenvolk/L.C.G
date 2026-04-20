@@ -259,7 +259,7 @@ After retrieving raw calendar data, **always pipe through the helper scripts** i
 # 2. Normalize (resolves response codes, flags externals, converts TZ)
 node scripts/helpers/normalize-calendar.js /tmp/cal-raw-<date>.json \
   --tz America/Chicago \
-  --user-email jin.lee@microsoft.com \
+  --user-email user@example.com \
   > /tmp/cal-normalized-<date>.json
 
 # 3. Score + detect conflicts (VIP boost, customer-facing boost, declined penalty)
@@ -272,7 +272,7 @@ node scripts/helpers/score-meetings.js /tmp/cal-normalized-<date>.json \
 
 ```bash
 cat /tmp/cal-raw-<date>.json \
-  | node scripts/helpers/normalize-calendar.js --tz America/Chicago --user-email jin.lee@microsoft.com \
+  | node scripts/helpers/normalize-calendar.js --tz America/Chicago --user-email user@example.com \
   | node scripts/helpers/score-meetings.js --vip-list "$VAULT_DIR/_lcg/vip-list.md" \
   > /tmp/cal-scored-<date>.json
 ```

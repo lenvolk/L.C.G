@@ -101,6 +101,10 @@ const trend = data.trend || [];
 const topAccounts = data.topAccounts || [];
 const renewals = data.renewals || [];
 const gapAccounts = data.gapAccounts || [];
+const aioAccountMoM = data.aioAccountMoM || [];
+const aioServiceBreakdown = data.aioServiceBreakdown || [];
+const aioBudgetAttainment = data.aioBudgetAttainment || [];
+const hasAioData = aioAccountMoM.length > 0 || aioServiceBreakdown.length > 0 || aioBudgetAttainment.length > 0;
 const generated = data.generated || new Date().toISOString().slice(0, 10);
 
 // ── MSX deep links ───────────────────────────────────────────────────────────
@@ -562,6 +566,133 @@ const payorAcrPct = (() => {
   return total > 0 && payor ? (parseDollar(payor.ACR_LCM) / total * 100).toFixed(0) : '0';
 })();
 
+// ── AIO Deep Dive Builders ──────────────────────────────────────────────────
+
+function buildAioHeatmapData(aioMoM) {
+  if (!aioMoM.length) return null;
+  const monthSet = new Set();
+  const byAcct = new Map();
+  for (const row of aioMoM) {
+    const key = row.TPID || row.Account;
+    if (!byAcct.has(key)) byAcct.set(key, { name: row.Account, tpid: row.TPID, months: new Map() });
+    const monthLabel = formatAioMonth(row.FiscalMonth);
+    monthSet.add(monthLabel);
+    byAcct.get(key).months.set(monthLabel, parseDollar(row.ACR));
+  }
+  const months = [...monthSet].sort();
+  const accounts = [...byAcct.values()].map(a => {
+    const vals = months.map(m => a.months.get(m) || 0);
+    const last2 = vals.filter(v => v > 0).slice(-2);
+    const delta = last2.length === 2 ? last2[1] - last2[0] : 0;
+    const dir = last2.length < 2 ? '→' : (Math.abs(delta / (last2[0] || 1)) < 0.01 ? '→' : delta > 0 ? '↑' : '↓');
+    return { ...a, monthValues: vals, delta, dir };
+  }).sort((a, b) => {
+    const aLast = a.monthValues[a.monthValues.length - 1] || 0;
+    const bLast = b.monthValues[b.monthValues.length - 1] || 0;
+    return bLast - aLast;
+  });
+  return { accounts, months };
+}
+
+function formatAioMonth(raw) {
+  if (!raw) return '—';
+  const s = String(raw);
+  if (s.match(/^\d{4}-\d{2}/)) {
+    const d = new Date(s.slice(0, 10) + 'T12:00:00Z');
+    return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' });
+  }
+  return s.length > 8 ? s.slice(0, 8) : s;
+}
+
+function heatmapCellClass(v, max) {
+  if (!v || v === 0) return 'hm-zero';
+  const ratio = v / (max || 1);
+  if (ratio >= 0.6) return 'hm-high';
+  if (ratio >= 0.25) return 'hm-mid';
+  return 'hm-low';
+}
+
+function buildAioPillarData(aioBreakdown) {
+  if (!aioBreakdown.length) return null;
+  const SQL_RELEVANT_PILLARS = new Set(['data & ai', 'infra']);
+  const byAcct = new Map();
+  for (const row of aioBreakdown) {
+    const key = row.TPID || row.Account;
+    if (!byAcct.has(key)) byAcct.set(key, { name: row.Account, tpid: row.TPID, pillars: {} });
+    const pillar = row.StrategicPillar || 'Other';
+    const val = parseDollar(row.ACR) || parseDollar(row.PipelineACR) || 0;
+    byAcct.get(key).pillars[pillar] = (byAcct.get(key).pillars[pillar] || 0) + val;
+  }
+  const PILLAR_COLORS = {
+    'Data & AI': '#6c5ce7', 'Infra': '#00b894',
+    'Digital & App Innovation': '#74b9ff', 'Security': '#ffc048',
+    'Modern Work': '#fd79a8', 'Business Applications': '#a29bfe'
+  };
+  return [...byAcct.values()].map(a => {
+    const total = Object.values(a.pillars).reduce((s, v) => s + v, 0);
+    const sqlAdj = Object.entries(a.pillars)
+      .filter(([p]) => SQL_RELEVANT_PILLARS.has(p.toLowerCase()))
+      .reduce((s, [, v]) => s + v, 0);
+    const sqlPct = total > 0 ? ((sqlAdj / total) * 100).toFixed(0) : '0';
+    const segments = Object.entries(a.pillars).sort(([, a], [, b]) => b - a)
+      .map(([p, v]) => ({
+        pillar: p, value: v,
+        pct: total > 0 ? ((v / total) * 100).toFixed(0) : '0',
+        color: PILLAR_COLORS[p] || '#8b8fa3',
+        sqlRelevant: SQL_RELEVANT_PILLARS.has(p.toLowerCase())
+      }));
+    return { ...a, total, sqlPct, segments };
+  }).sort((a, b) => b.total - a.total);
+}
+
+function budgetSignal(pct) {
+  if (pct == null || isNaN(pct)) return { cls: 'budget-nodata', label: '⚫ No data' };
+  const v = typeof pct === 'string' ? parseFloat(pct) : pct;
+  const p = v > 2 ? v : v * 100;
+  if (p >= 100) return { cls: 'budget-ahead', label: '🟢 Ahead' };
+  if (p >= 80) return { cls: 'budget-ontrack', label: '🟡 On track' };
+  return { cls: 'budget-below', label: '🔴 Below target' };
+}
+
+const heatmapData = buildAioHeatmapData(aioAccountMoM);
+const pillarData = buildAioPillarData(aioServiceBreakdown);
+
+// Compute SQL-adjacent ratio per account for the expandable chart overlay
+const sqlAdjRatioByTpid = new Map();
+if (pillarData) {
+  for (const a of pillarData) {
+    sqlAdjRatioByTpid.set(a.tpid, a.total > 0 ? parseFloat(a.sqlPct) / 100 : 0);
+  }
+}
+
+// Build per-account chart data: months[], totalACR[], sqlAdjACR[]
+const acctChartData = {};
+if (heatmapData) {
+  for (const a of heatmapData.accounts) {
+    const ratio = sqlAdjRatioByTpid.get(a.tpid) || 0;
+    acctChartData[a.tpid] = {
+      name: a.name,
+      months: heatmapData.months,
+      total: a.monthValues,
+      sqlAdj: a.monthValues.map(v => Math.round(v * ratio)),
+    };
+  }
+}
+
+// Collect all unique pillar names + colors for the shared legend
+const PILLAR_COLORS_LEGEND = {
+  'Data & AI': '#6c5ce7', 'Infra': '#00b894',
+  'Digital & App Innovation': '#74b9ff', 'Security': '#ffc048',
+  'Modern Work': '#fd79a8', 'Business Applications': '#a29bfe'
+};
+const SQL_REL_PILLARS_SET = new Set(['Data & AI', 'Infra']);
+const allPillarsUsed = new Set();
+if (pillarData) {
+  for (const a of pillarData) {
+    for (const s of a.segments) allPillarsUsed.add(s.pillar);
+  }
+}
+
 // ── Build HTML ───────────────────────────────────────────────────────────────
 const html = `<!DOCTYPE html>
 <html lang="en">
@@ -764,6 +895,52 @@ const html = `<!DOCTYPE html>
   .why-neutral { background: rgba(139,143,163,0.15); color: var(--text-muted); }
   .why-warn    { background: var(--yellow-bg); color: var(--yellow); }
   .why-bad     { background: var(--red-bg); color: var(--red); font-weight: 600; }
+
+  /* Expandable detail rows for compact tables */
+  .expand-toggle {
+    cursor: pointer; user-select: none;
+  }
+  .expand-toggle:hover { background: rgba(162,155,254,0.08); }
+  .expand-toggle td:first-child::before {
+    content: '▸'; display: inline-block; margin-right: 6px;
+    font-size: 11px; color: var(--text-muted);
+    transition: transform 0.15s ease;
+  }
+  .expand-toggle.open td:first-child::before {
+    transform: rotate(90deg);
+  }
+  .detail-row { display: none; }
+  .detail-row.open { display: table-row; }
+  .detail-row td {
+    padding: 10px 14px 14px !important;
+    background: rgba(108,92,231,0.04);
+    border-top: none !important;
+  }
+  .detail-inner {
+    display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start;
+  }
+  .detail-block {
+    flex: 1; min-width: 100px;
+  }
+  .detail-block-full {
+    flex-basis: 100%; margin-top: 6px;
+    padding-top: 8px; border-top: 1px solid rgba(139,143,163,0.12);
+  }
+  .detail-label {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px;
+  }
+  .detail-value {
+    font-size: 12.5px; color: var(--text); line-height: 1.5;
+  }
+  .detail-value .why-chip { font-size: 10px; }
+  .detail-next-step {
+    font-size: 13px; color: var(--accent-light); font-weight: 500;
+    line-height: 1.5;
+  }
+  .compact-table tr.expand-toggle + tr.detail-row > td {
+    border-bottom: 1px solid var(--border);
+  }
 
   /* Chart */
   .chart-area { padding: 16px 0; }
@@ -1014,6 +1191,105 @@ const html = `<!DOCTYPE html>
     .chart-caption strong { color: #5b4cbb !important; }
   }
 
+  /* AIO Deep Dive */
+  .heatmap-table td.hm-cell { text-align: center; font-size: 11px; font-weight: 600; padding: 6px 8px; min-width: 72px; }
+  .hm-high { background: rgba(0,184,148,0.25); color: var(--green); }
+  .hm-mid  { background: rgba(116,185,255,0.15); color: var(--blue); }
+  .hm-low  { background: rgba(139,143,163,0.10); color: var(--text-muted); }
+  .hm-zero { background: transparent; color: var(--text-muted); }
+  .hm-dir  { font-size: 13px; font-weight: 700; }
+  .pillar-bar-wrap { display: flex; height: 22px; border-radius: 4px; overflow: hidden; position: relative; }
+  .pillar-seg { display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; color: #fff; min-width: 1px; cursor: default; transition: opacity 0.15s; }
+  .pillar-seg.sql-relevant { outline: 2px solid var(--accent-light); outline-offset: -2px; }
+  .pillar-bar-wrap:hover .pillar-seg { opacity: 0.6; }
+  .pillar-bar-wrap:hover .pillar-seg:hover { opacity: 1; transform: scaleY(1.15); }
+  .budget-ahead { color: var(--green); font-weight: 700; }
+  .budget-ontrack { color: var(--yellow); font-weight: 600; }
+  .budget-below { color: var(--red); font-weight: 700; }
+  .budget-nodata { color: var(--text-muted); }
+  .aio-source-badge { font-size: 10px; color: var(--text-muted); background: rgba(139,143,163,0.12); padding: 2px 8px; border-radius: 8px; }
+
+  /* Shared pillar legend */
+  .pillar-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 16px; padding: 10px 14px; background: var(--surface-2); border-radius: var(--radius-sm); }
+  .pillar-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text); cursor: default; }
+  .pillar-legend-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+  .pillar-legend-item.sql-rel .pillar-legend-swatch { outline: 2px solid var(--accent-light); outline-offset: -1px; }
+  .pillar-legend-item .pillar-legend-label { font-weight: 500; }
+  .pillar-legend-item .pillar-legend-tag { font-size: 9px; font-weight: 700; color: var(--accent-light); background: rgba(108,92,231,0.15); padding: 1px 5px; border-radius: 4px; margin-left: 2px; }
+
+  /* Pillar tooltip */
+  .pillar-tooltip {
+    position: fixed; z-index: 1000; pointer-events: none;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    font-size: 12px; color: var(--text);
+    max-width: 260px; opacity: 0; transition: opacity 0.12s;
+  }
+  .pillar-tooltip.show { opacity: 1; }
+  .pillar-tooltip .tt-name { font-weight: 700; color: var(--white); margin-bottom: 4px; }
+  .pillar-tooltip .tt-row { display: flex; justify-content: space-between; gap: 16px; margin-top: 2px; }
+  .pillar-tooltip .tt-val { font-weight: 600; }
+  .pillar-tooltip .tt-sql { color: var(--accent-light); font-size: 10px; font-weight: 700; margin-top: 4px; }
+
+  /* Expandable heatmap rows */
+  .hm-expand-row { cursor: pointer; }
+  .hm-expand-row:hover { background: rgba(108,92,231,0.10) !important; }
+  .hm-expand-row td:first-child::before { content: '▶ '; font-size: 9px; color: var(--text-muted); transition: transform 0.2s; display: inline-block; margin-right: 4px; }
+  .hm-expand-row.expanded td:first-child::before { content: '▼ '; color: var(--accent-light); }
+  .hm-chart-row { display: none; }
+  .hm-chart-row.show { display: table-row; }
+  .hm-chart-row td { padding: 0 !important; border-bottom: 2px solid var(--accent) !important; }
+  .hm-chart-container {
+    padding: 16px 20px; background: var(--surface-2); border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  }
+  .hm-chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .hm-chart-title { font-size: 13px; font-weight: 600; color: var(--white); }
+  .hm-chart-legend { display: flex; gap: 16px; font-size: 11px; }
+  .hm-chart-legend-item { display: flex; align-items: center; gap: 5px; color: var(--text-muted); }
+  .hm-chart-legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+  .hm-chart-svg { width: 100%; height: 220px; display: block; }
+  .chart-hover-line { stroke: rgba(255,255,255,0.15); stroke-width: 1; pointer-events: none; }
+  .chart-dot-hover { transition: r 0.1s; }
+  .chart-val-label { font-size: 9px; font-weight: 600; pointer-events: none; }
+  .chart-point-tip {
+    position: absolute; z-index: 10; pointer-events: none;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    font-size: 12px; color: var(--text); min-width: 180px;
+    opacity: 0; transition: opacity 0.12s;
+  }
+  .chart-point-tip.visible { opacity: 1; }
+  .chart-point-tip .cpt-month { font-weight: 700; color: var(--white); margin-bottom: 6px; font-size: 13px; }
+  .chart-point-tip .cpt-row { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
+  .chart-point-tip .cpt-label { color: var(--text-muted); }
+  .chart-point-tip .cpt-val { font-weight: 600; }
+  .chart-point-tip .cpt-total { color: var(--accent-light); }
+  .chart-point-tip .cpt-sql { color: var(--green); }
+  .chart-point-tip .cpt-delta { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--border); font-size: 11px; }
+  .chart-point-tip .cpt-up { color: var(--green); }
+  .chart-point-tip .cpt-down { color: var(--red); }
+
+  @media print {
+    .hm-high { background: #e6f9f0 !important; color: #00875a !important; }
+    .hm-mid  { background: #e8f4fd !important; color: #1a6fb5 !important; }
+    .hm-low  { background: #f0f0f0 !important; color: #555 !important; }
+    .budget-ahead { color: #00875a !important; }
+    .budget-ontrack { color: #b8860b !important; }
+    .budget-below { color: #de350b !important; }
+    .pillar-seg.sql-relevant { outline-color: #5b4cbb !important; }
+    .pillar-legend { background: #f5f5f5 !important; }
+    .pillar-legend-item { color: #222 !important; }
+    .pillar-tooltip { display: none !important; }
+    .chart-point-tip { display: none !important; }
+    .hm-expand-row td:first-child::before { display: none !important; }
+    .hm-chart-row { display: table-row !important; }
+    .hm-chart-row.show { display: table-row !important; }
+    .hm-chart-container { background: #f7f7f7 !important; }
+    .hm-chart-title { color: #111 !important; }
+  }
+
   /* Easter egg */
   .easter-egg {
     display: none;
@@ -1051,7 +1327,7 @@ const html = `<!DOCTYPE html>
   </div>
   <div class="meta">
     <div class="meta-item">Generated <strong>${new Date(generated + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></div>
-    <div class="meta-item">Model <strong>SQL 600 Performance Tracking</strong></div>
+    <div class="meta-item">Model <strong>SQL 600 Performance Tracking</strong>${hasAioData ? ' + <strong>Azure All-in-One</strong>' : ''}</div>
     <div class="meta-item">Scope <strong>FY26</strong></div>
   </div>
 </div>
@@ -1220,7 +1496,7 @@ const html = `<!DOCTYPE html>
     <div class="section-title">🔝 Top Accounts by ACR</div>
     <span class="section-badge badge-green">${topAccounts.length} Accounts</span>
   </div>
-  <table>
+  <table class="compact-table">
     <thead>
       <tr>
         <th>#</th>
@@ -1228,31 +1504,37 @@ const html = `<!DOCTYPE html>
         <th>Vertical</th>
         <th class="right">ACR (LCM)</th>
         <th class="right">Committed</th>
-        <th class="right">Uncommitted</th>
         <th class="right">Ann. Growth</th>
-        <th class="right">Opps</th>
         <th class="right">SQL Cores</th>
-        <th>Why flagged</th>
-        <th class="next-step-cell">Recommended Next Step</th>
       </tr>
     </thead>
     <tbody>
-      ${topAccounts.map((a, i) => `<tr>
+      ${topAccounts.map((a, i) => {
+        const rationale = topAccountRationale(a, i);
+        const nextStep = topAccountNextStep(a);
+        return `<tr class="expand-toggle" data-detail="top-${i}">
         <td style="color:var(--text-muted)">${i + 1}</td>
         ${acctCell(a)}
         <td>
           <span class="tag tag-${a.Vertical?.toLowerCase().includes('payor') ? 'payor' : a.Vertical?.toLowerCase().includes('provider') ? 'provider' : a.Vertical?.toLowerCase().includes('pharma') ? 'pharma' : 'medtech'}">${a.Vertical || '—'}</span>
-          ${a.Segment ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px">${a.Segment}</div>` : ''}
         </td>
         <td class="right" style="font-weight:600">${fmtDollar(a.ACR_LCM, false)}</td>
         <td class="right">${fmtDollar(a.PipeCommitted, false)}</td>
-        <td class="right">${fmtDollar(a.PipeUncommitted, false)}</td>
         <td class="right" style="color:var(--green)">${fmtDollar(a.AnnualizedGrowth)}</td>
-        <td class="right">${fmtNum(a.QualifiedOpps) || '—'}/${fmtNum(a.TotalOpps) || '—'}</td>
         <td class="right">${fmtNum(a.SQLCores)}</td>
-        <td class="why-cell">${topAccountRationale(a, i)}</td>
-        <td class="next-step-cell">${topAccountNextStep(a)}</td>
-      </tr>`).join('\n      ')}
+      </tr>
+      <tr class="detail-row" id="top-${i}">
+        <td colspan="7">
+          <div class="detail-inner">
+            <div class="detail-block"><div class="detail-label">Uncommitted</div><div class="detail-value">${fmtDollar(a.PipeUncommitted, false)}</div></div>
+            <div class="detail-block"><div class="detail-label">Segment</div><div class="detail-value">${a.Segment || '—'}</div></div>
+            <div class="detail-block"><div class="detail-label">Opps (Qual / Total)</div><div class="detail-value">${fmtNum(a.QualifiedOpps) || '—'} / ${fmtNum(a.TotalOpps) || '—'}</div></div>
+            <div class="detail-block"><div class="detail-label">Signals</div><div class="detail-value">${rationale}</div></div>
+            <div class="detail-block-full"><div class="detail-label">Recommended Next Step</div><div class="detail-next-step">${nextStep}</div></div>
+          </div>
+        </td>
+      </tr>`;
+      }).join('\n      ')}
     </tbody>
   </table>
   ${narrative.topAccounts ? `<div class="chart-caption" style="margin-top:12px">${mdInline(narrative.topAccounts)}</div>` : ''}
@@ -1286,19 +1568,15 @@ const html = `<!DOCTYPE html>
         ? mdInline(narrative.renewal)
         : `<strong>${renewalQ4} accounts</strong> renewing in <strong>FY26-Q4</strong> and <strong>${renewalQ3}</strong> in <strong>FY26-Q3</strong>. Only <strong>${arcEnabled}</strong> are Arc-enabled. DB modernization positioning is critical before renewal windows close.`}
     </div>
-    <div style="max-height: 400px; overflow-y: auto;">
-    <table>
+    <div style="max-height: 480px; overflow-y: auto;">
+    <table class="compact-table">
       <thead>
         <tr>
           <th>Account</th>
-          <th>Category</th>
-          <th>Renewal Q</th>
+          <th>Renewal</th>
           <th class="right">SQL Cores</th>
           <th>Arc?</th>
-          <th class="right">ACR</th>
           <th class="right">Committed</th>
-          <th>Why flagged</th>
-          <th class="next-step-cell">Recommended Next Step</th>
         </tr>
       </thead>
       <tbody>
@@ -1306,17 +1584,27 @@ const html = `<!DOCTYPE html>
           const qa = a.RenewalQuarter || 'ZZ', qb = b.RenewalQuarter || 'ZZ';
           if (qa !== qb) return qa.localeCompare(qb);
           return (b.SQLCores || 0) - (a.SQLCores || 0);
-        }).map(r => `<tr>
-          ${acctCell(r, { maxWidth: 200 })}
-          <td><span class="tag tag-${r.Category?.includes('Renewal') ? 'renewal' : r.Category?.includes('Cores') ? 'cores' : 'field'}">${r.Category?.replace('(Excl. renewals)', '').trim() || '—'}</span></td>
+        }).map((r, i) => {
+          const rationale = renewalRationale(r);
+          const nextStep = topAccountNextStep(r);
+          return `<tr class="expand-toggle" data-detail="renewal-${i}">
+          ${acctCell(r, { maxWidth: 180 })}
           <td><span class="tag tag-renewal">${r.RenewalQuarter || '—'}</span></td>
           <td class="right" style="font-weight:600">${fmtNum(r.SQLCores)}</td>
           <td><span class="tag ${r.ArcEnabled === 'Yes' ? 'tag-arc' : 'tag-no-arc'}">${r.ArcEnabled || 'No'}</span></td>
-          <td class="right">${fmtDollar(r.ACR_LCM, false)}</td>
           <td class="right">${fmtDollar(r.PipeCommitted, false)}</td>
-          <td class="why-cell">${renewalRationale(r)}</td>
-          <td class="next-step-cell">${topAccountNextStep(r)}</td>
-        </tr>`).join('\n        ')}
+        </tr>
+        <tr class="detail-row" id="renewal-${i}">
+          <td colspan="5">
+            <div class="detail-inner">
+              <div class="detail-block"><div class="detail-label">Category</div><div class="detail-value"><span class="tag tag-${r.Category?.includes('Renewal') ? 'renewal' : r.Category?.includes('Cores') ? 'cores' : 'field'}">${r.Category?.replace('(Excl. renewals)', '').trim() || '—'}</span></div></div>
+              <div class="detail-block"><div class="detail-label">ACR (LCM)</div><div class="detail-value">${fmtDollar(r.ACR_LCM, false)}</div></div>
+              <div class="detail-block"><div class="detail-label">Signals</div><div class="detail-value">${rationale}</div></div>
+              <div class="detail-block-full"><div class="detail-label">Recommended Next Step</div><div class="detail-next-step">${nextStep}</div></div>
+            </div>
+          </td>
+        </tr>`;
+        }).join('\n        ')}
       </tbody>
     </table>
     </div>
@@ -1333,34 +1621,409 @@ const html = `<!DOCTYPE html>
         ? mdInline(narrative.gcp)
         : `<strong>${gapAccounts.length} HLS SQL600 accounts</strong> have <strong>zero committed pipeline</strong>. What they aren't spending with us, they're spending with <strong>GCP</strong>. These accounts represent DB modernization opportunities that directly compete with GCP capture.`}
     </div>
-    <div style="max-height: 400px; overflow-y: auto;">
-    <table>
+    <div style="max-height: 480px; overflow-y: auto;">
+    <table class="compact-table">
       <thead>
         <tr>
           <th>Account</th>
           <th>Vertical</th>
           <th class="right">ACR</th>
-          <th class="right">Uncommitted</th>
           <th class="right">SQL Cores</th>
-          <th>Why flagged</th>
-          <th class="next-step-cell">Recommended Next Step</th>
         </tr>
       </thead>
       <tbody>
-        ${gapAccounts.sort((a, b) => parseDollar(b.ACR_LCM) - parseDollar(a.ACR_LCM)).map(g => `<tr>
-          ${acctCell(g, { maxWidth: 220 })}
+        ${gapAccounts.sort((a, b) => parseDollar(b.ACR_LCM) - parseDollar(a.ACR_LCM)).map((g, i) => {
+          const rationale = gapRationale(g);
+          const nextStep = topAccountNextStep(g);
+          return `<tr class="expand-toggle" data-detail="gap-${i}">
+          ${acctCell(g, { maxWidth: 180 })}
           <td><span class="tag tag-${g.Vertical?.toLowerCase().includes('payor') ? 'payor' : g.Vertical?.toLowerCase().includes('provider') ? 'provider' : g.Vertical?.toLowerCase().includes('pharma') ? 'pharma' : 'medtech'}">${g.Vertical || '—'}</span></td>
           <td class="right">${fmtDollar(g.ACR_LCM, false)}</td>
-          <td class="right">${fmtDollar(g.PipeUncommitted, false)}</td>
           <td class="right">${fmtNum(g.SQLCores)}</td>
-          <td class="why-cell">${gapRationale(g)}</td>
-          <td class="next-step-cell">${topAccountNextStep(g)}</td>
-        </tr>`).join('\n        ')}
+        </tr>
+        <tr class="detail-row" id="gap-${i}">
+          <td colspan="4">
+            <div class="detail-inner">
+              <div class="detail-block"><div class="detail-label">Uncommitted Pipe</div><div class="detail-value">${fmtDollar(g.PipeUncommitted, false)}</div></div>
+              <div class="detail-block"><div class="detail-label">Signals</div><div class="detail-value">${rationale}</div></div>
+              <div class="detail-block-full"><div class="detail-label">Recommended Next Step</div><div class="detail-next-step">${nextStep}</div></div>
+            </div>
+          </td>
+        </tr>`;
+        }).join('\n        ')}
       </tbody>
     </table>
     </div>
   </div>
 </div>
+
+${hasAioData ? `
+<!-- AIO: Azure Consumption Deep Dive -->
+<div class="section" id="aio-deep-dive">
+  <div class="section-header">
+    <div class="section-title">🔍 Azure Consumption Deep Dive</div>
+    <span class="aio-source-badge">Source: Azure All-in-One (MSXI)</span>
+  </div>
+
+  ${heatmapData ? `
+  <div style="margin-bottom: 28px;">
+    <div style="font-size:14px;font-weight:600;color:var(--white);margin-bottom:4px">Account MoM ACR Trend</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Click any row to expand a Total vs SQL-Adjacent breakdown chart</div>
+    <div style="overflow-x:auto">
+    <table class="heatmap-table" id="hm-table">
+      <thead>
+        <tr>
+          <th>Account</th>
+          ${heatmapData.months.map(m => `<th class="right" style="min-width:72px">${m}</th>`).join('')}
+          <th class="right">MoM Δ</th>
+          <th>Dir</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${heatmapData.accounts.slice(0, 20).map((a, idx) => {
+          const maxVal = Math.max(...a.monthValues);
+          const acctRow = topAccounts.find(t => t.TPID === a.tpid) || gapAccounts.find(g => g.TPID === a.tpid) || renewals.find(r => r.TPID === a.tpid) || { TopParent: a.name, TPID: a.tpid };
+          const colSpan = heatmapData.months.length + 3;
+          return `<tr class="hm-expand-row" data-tpid="${a.tpid}" data-idx="${idx}">
+            ${acctCell(acctRow, { maxWidth: 200, showTpid: false })}
+            ${a.monthValues.map(v => `<td class="hm-cell ${heatmapCellClass(v, maxVal)}">${v > 0 ? fmtDollar(v) : '—'}</td>`).join('')}
+            <td class="right" style="font-weight:600;color:${a.delta >= 0 ? 'var(--green)' : 'var(--red)'}">${a.delta !== 0 ? (a.delta > 0 ? '+' : '') + fmtDollar(a.delta) : '—'}</td>
+            <td class="hm-dir ${a.dir === '↑' ? 'arrow-up' : a.dir === '↓' ? 'arrow-down' : 'arrow-flat'}">${a.dir}</td>
+          </tr>
+          <tr class="hm-chart-row" id="chart-row-${a.tpid}">
+            <td colspan="${colSpan}">
+              <div class="hm-chart-container">
+                <div class="hm-chart-header">
+                  <div class="hm-chart-title">${a.name} — Total ACR vs SQL-Adjacent</div>
+                  <div class="hm-chart-legend">
+                    <div class="hm-chart-legend-item"><div class="hm-chart-legend-dot" style="background:var(--accent-light)"></div>Total ACR</div>
+                    <div class="hm-chart-legend-item"><div class="hm-chart-legend-dot" style="background:var(--green)"></div>SQL-Adjacent (Data & AI + Infra)</div>
+                  </div>
+                </div>
+                <div class="hm-chart-target" id="chart-target-${a.tpid}"></div>
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>
+    <div class="chart-caption" style="margin-top:10px">
+      Month-over-month ACR from full Azure consumption view. <strong>${heatmapData.accounts.filter(a => a.dir === '↑').length}</strong> accounts trending up, <strong>${heatmapData.accounts.filter(a => a.dir === '↓').length}</strong> declining.
+      ${heatmapData.accounts.filter(a => a.dir === '↓').length > 0 ? ` Declining: <strong>${heatmapData.accounts.filter(a => a.dir === '↓').slice(0, 3).map(a => a.name).join(', ')}</strong>.` : ''}
+    </div>
+  </div>
+  ` : ''}
+
+  ${pillarData ? `
+  <div style="margin-bottom: 28px;">
+    <div style="font-size:14px;font-weight:600;color:var(--white);margin-bottom:12px">Service Pillar Mix (SQL600-Relevant Highlighted)</div>
+    <div class="pillar-legend">
+      ${[...allPillarsUsed].sort((a, b) => {
+        const ai = SQL_REL_PILLARS_SET.has(a) ? 0 : 1;
+        const bi = SQL_REL_PILLARS_SET.has(b) ? 0 : 1;
+        return ai - bi || a.localeCompare(b);
+      }).map(p => `<div class="pillar-legend-item${SQL_REL_PILLARS_SET.has(p) ? ' sql-rel' : ''}">
+        <div class="pillar-legend-swatch" style="background:${PILLAR_COLORS_LEGEND[p] || '#8b8fa3'}"></div>
+        <span class="pillar-legend-label">${p}</span>
+        ${SQL_REL_PILLARS_SET.has(p) ? '<span class="pillar-legend-tag">SQL600</span>' : ''}
+      </div>`).join('')}
+    </div>
+    <table id="pillar-table">
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th style="min-width:280px">Service Mix</th>
+          <th class="right">Total ACR</th>
+          <th class="right">SQL-Adjacent %</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${pillarData.slice(0, 20).map(a => {
+          const acctRow = topAccounts.find(t => t.TPID === a.tpid) || gapAccounts.find(g => g.TPID === a.tpid) || renewals.find(r => r.TPID === a.tpid) || { TopParent: a.name, TPID: a.tpid };
+          return `<tr>
+            ${acctCell(acctRow, { maxWidth: 180, showTpid: false })}
+            <td>
+              <div class="pillar-bar-wrap" data-account="${(a.name || '').replace(/"/g, '&quot;')}">
+                ${a.segments.map(s => `<div class="pillar-seg${s.sqlRelevant ? ' sql-relevant' : ''}" style="width:${Math.max(parseFloat(s.pct), 2)}%;background:${s.color}" data-pillar="${s.pillar}" data-value="${s.value}" data-pct="${s.pct}" data-sql="${s.sqlRelevant}">${parseFloat(s.pct) >= 15 ? s.pct + '%' : ''}</div>`).join('')}
+              </div>
+            </td>
+            <td class="right" style="font-weight:600">${fmtDollar(a.total)}</td>
+            <td class="right" style="font-weight:600;color:${parseFloat(a.sqlPct) >= 40 ? 'var(--green)' : parseFloat(a.sqlPct) >= 20 ? 'var(--yellow)' : 'var(--red)'}">${a.sqlPct}%</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div class="chart-caption" style="margin-top:10px">
+      SQL-adjacent = <strong style="color:var(--accent-light)">Data & AI</strong> + <strong style="color:var(--green)">Infra</strong> as % of total Azure consumption. Outlined segments = SQL600-relevant pillars.
+    </div>
+  </div>
+  ` : ''}
+
+  ${aioBudgetAttainment.length ? `
+  <div>
+    <div style="font-size:14px;font-weight:600;color:var(--white);margin-bottom:12px">Budget Attainment (Azure All-Up)</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th class="right">ACR YTD</th>
+          <th class="right">ACR LCM</th>
+          <th class="right">Budget Attain %</th>
+          <th>Signal</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${[...aioBudgetAttainment].sort((a, b) => {
+          const pa = parseDollar(a.BudgetAttainPct), pb = parseDollar(b.BudgetAttainPct);
+          return (isNaN(pa) ? 999 : pa) - (isNaN(pb) ? 999 : pb);
+        }).slice(0, 20).map(a => {
+          const sig = budgetSignal(a.BudgetAttainPct);
+          const acctRow = topAccounts.find(t => t.TPID === a.TPID) || gapAccounts.find(g => g.TPID === a.TPID) || renewals.find(r => r.TPID === a.TPID) || { TopParent: a.Account, TPID: a.TPID };
+          return `<tr>
+            ${acctCell(acctRow, { maxWidth: 200, showTpid: false })}
+            <td class="right">${fmtDollar(a.ACR_YTD, false)}</td>
+            <td class="right">${fmtDollar(a.ACR_LCM, false)}</td>
+            <td class="right" style="font-weight:600">${a.BudgetAttainPct != null ? fmtPct(a.BudgetAttainPct) : '—'}</td>
+            <td><span class="${sig.cls}">${sig.label}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div class="chart-caption" style="margin-top:10px">
+      Budget attainment from Azure All-in-One (org-level targets). <strong class="budget-below">${aioBudgetAttainment.filter(a => { const v = typeof a.BudgetAttainPct === 'number' ? a.BudgetAttainPct : parseFloat(a.BudgetAttainPct); const p = v > 2 ? v : v * 100; return !isNaN(p) && p < 80; }).length}</strong> accounts below 80% target.
+    </div>
+  </div>
+  ` : ''}
+</div>
+
+<!-- Pillar tooltip (shared) -->
+<div class="pillar-tooltip" id="pillar-tt"></div>
+
+<!-- AIO chart data + interaction JS -->
+<script>
+(function() {
+  const CHART_DATA = ${JSON.stringify(acctChartData)};
+
+  // ── Pillar tooltip ─────────────────────────────────────────────
+  const tt = document.getElementById('pillar-tt');
+  if (tt) {
+    document.querySelectorAll('.pillar-seg').forEach(seg => {
+      seg.addEventListener('mouseenter', e => {
+        const pillar = seg.dataset.pillar;
+        const value = Number(seg.dataset.value);
+        const pct = seg.dataset.pct;
+        const isSql = seg.dataset.sql === 'true';
+        const acctName = seg.closest('.pillar-bar-wrap')?.dataset.account || '';
+        tt.innerHTML = '<div class="tt-name">' + pillar + '</div>'
+          + '<div class="tt-row"><span>ACR</span><span class="tt-val">' + fmtD(value) + '</span></div>'
+          + '<div class="tt-row"><span>Share</span><span class="tt-val">' + pct + '%</span></div>'
+          + (isSql ? '<div class="tt-sql">✦ SQL600-relevant pillar</div>' : '');
+        tt.classList.add('show');
+      });
+      seg.addEventListener('mousemove', e => {
+        tt.style.left = (e.clientX + 14) + 'px';
+        tt.style.top = (e.clientY - 10) + 'px';
+      });
+      seg.addEventListener('mouseleave', () => { tt.classList.remove('show'); });
+    });
+  }
+
+  function fmtD(v) {
+    if (v == null) return '—';
+    const abs = Math.abs(v);
+    if (abs >= 1e9) return '$' + (v / 1e9).toFixed(1) + 'B';
+    if (abs >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
+    if (abs >= 1e3) return '$' + (v / 1e3).toFixed(0) + 'K';
+    return '$' + Math.round(v);
+  }
+
+  // ── Expandable heatmap charts ──────────────────────────────────
+  document.querySelectorAll('.hm-expand-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const tpid = row.dataset.tpid;
+      const chartRow = document.getElementById('chart-row-' + tpid);
+      const target = document.getElementById('chart-target-' + tpid);
+      if (!chartRow || !target) return;
+
+      const wasExpanded = row.classList.contains('expanded');
+      // Collapse all first
+      document.querySelectorAll('.hm-expand-row.expanded').forEach(r => {
+        r.classList.remove('expanded');
+        const cr = document.getElementById('chart-row-' + r.dataset.tpid);
+        if (cr) cr.classList.remove('show');
+      });
+
+      if (!wasExpanded) {
+        row.classList.add('expanded');
+        chartRow.classList.add('show');
+        // Render chart if not already rendered
+        if (!target.querySelector('svg')) renderChart(target, tpid);
+      }
+    });
+  });
+
+  function renderChart(container, tpid) {
+    const d = CHART_DATA[tpid];
+    if (!d || !d.months.length) {
+      container.innerHTML = '<div style="padding:20px;color:var(--text-muted);font-size:13px">No monthly data available for this account</div>';
+      return;
+    }
+
+    const W = container.clientWidth || 700;
+    const H = 220;
+    const M = { top: 28, right: 24, bottom: 32, left: 60 };
+    const iw = W - M.left - M.right;
+    const ih = H - M.top - M.bottom;
+    const n = d.months.length;
+    const maxV = Math.max(...d.total, 1) * 1.22;
+    const x = i => M.left + (i / Math.max(n - 1, 1)) * iw;
+    const y = v => M.top + ih - (v / maxV) * ih;
+
+    // Create wrapper with relative positioning for the tooltip
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'relative';
+
+    // Create tooltip element
+    const tip = document.createElement('div');
+    tip.className = 'chart-point-tip';
+    wrapper.appendChild(tip);
+
+    const yTicks = [0, 0.25, 0.5, 0.75, 1].map(r => r * maxV);
+
+    const sqlAreaPts = d.sqlAdj.map((v, i) => [x(i), y(v)]);
+    const sqlArea = 'M' + sqlAreaPts.map(p => p.join(',')).join(' L')
+      + ' L' + x(n - 1) + ',' + (M.top + ih) + ' L' + x(0) + ',' + (M.top + ih) + ' Z';
+    const sqlLine = 'M' + sqlAreaPts.map(p => p.join(',')).join(' L');
+
+    const totalPts = d.total.map((v, i) => [x(i), y(v)]);
+    const totalLine = 'M' + totalPts.map(p => p.join(',')).join(' L');
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('class', 'hm-chart-svg');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+    let svgHTML = '<defs>'
+      + '<linearGradient id="sqlGrad' + tpid + '" x1="0" y1="0" x2="0" y2="1">'
+      + '<stop offset="0%" stop-color="#00b894" stop-opacity="0.45"/>'
+      + '<stop offset="100%" stop-color="#00b894" stop-opacity="0.05"/>'
+      + '</linearGradient></defs>';
+
+    // Grid
+    yTicks.forEach(v => {
+      svgHTML += '<line x1="' + M.left + '" x2="' + (W - M.right) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="#2d3148" stroke-dasharray="2,3" opacity="0.6"/>';
+      svgHTML += '<text x="' + (M.left - 8) + '" y="' + (y(v) + 4) + '" fill="#8b8fa3" font-size="10" text-anchor="end">' + fmtD(v) + '</text>';
+    });
+
+    // SQL-adjacent area + line
+    svgHTML += '<path d="' + sqlArea + '" fill="url(#sqlGrad' + tpid + ')"/>';
+    svgHTML += '<path d="' + sqlLine + '" fill="none" stroke="#00b894" stroke-width="2" stroke-dasharray="4,3"/>';
+
+    // Total line
+    svgHTML += '<path d="' + totalLine + '" fill="none" stroke="#a29bfe" stroke-width="2.5"/>';
+
+    // Vertical hover lines (hidden, shown on hover)
+    d.total.forEach((v, i) => {
+      svgHTML += '<line x1="' + x(i) + '" x2="' + x(i) + '" y1="' + M.top + '" y2="' + (M.top + ih) + '" class="chart-hover-line" id="hline-' + tpid + '-' + i + '" opacity="0"/>';
+    });
+
+    // Data points with dollar labels
+    d.total.forEach((v, i) => {
+      const sqlV = d.sqlAdj[i];
+      const month = d.months[i];
+
+      // Total dot
+      svgHTML += '<circle cx="' + x(i) + '" cy="' + y(v) + '" r="4" fill="#a29bfe" stroke="#1a1d27" stroke-width="1.5" class="chart-dot-hover" id="tdot-' + tpid + '-' + i + '"/>';
+      // Total value label (above dot)
+      svgHTML += '<text x="' + x(i) + '" y="' + (y(v) - 10) + '" fill="#a29bfe" class="chart-val-label" text-anchor="middle">' + fmtD(v) + '</text>';
+
+      // SQL dot + label
+      if (sqlV > 0) {
+        svgHTML += '<circle cx="' + x(i) + '" cy="' + y(sqlV) + '" r="3" fill="#00b894" stroke="#1a1d27" stroke-width="1" class="chart-dot-hover" id="sdot-' + tpid + '-' + i + '"/>';
+        // SQL label — position below the dot, but only if enough gap from total label
+        const labelY = y(sqlV) + 16;
+        svgHTML += '<text x="' + x(i) + '" y="' + labelY + '" fill="#00b894" class="chart-val-label" text-anchor="middle">' + fmtD(sqlV) + '</text>';
+      }
+
+      // Month label
+      svgHTML += '<text x="' + x(i) + '" y="' + (H - 8) + '" fill="#8b8fa3" font-size="9" text-anchor="middle">' + month + '</text>';
+
+      // Invisible hover zone (full height column)
+      svgHTML += '<rect x="' + (x(i) - (iw / n / 2)) + '" y="' + M.top + '" width="' + (iw / n) + '" height="' + (ih + M.bottom) + '" fill="transparent" data-idx="' + i + '" class="chart-hover-zone"/>';
+    });
+
+    svg.innerHTML = svgHTML;
+    wrapper.appendChild(svg);
+    container.appendChild(wrapper);
+
+    // ── Hover interaction ──────────────────────────────────────
+    const zones = svg.querySelectorAll('.chart-hover-zone');
+    zones.forEach(zone => {
+      zone.addEventListener('mouseenter', function(e) {
+        const i = parseInt(this.dataset.idx);
+        const v = d.total[i], sqlV = d.sqlAdj[i], month = d.months[i];
+        const prevV = i > 0 ? d.total[i - 1] : null;
+        const prevSql = i > 0 ? d.sqlAdj[i - 1] : null;
+        const sqlPct = v > 0 ? Math.round(sqlV / v * 100) : 0;
+
+        // Show vertical line
+        const hline = svg.getElementById('hline-' + tpid + '-' + i);
+        if (hline) hline.setAttribute('opacity', '1');
+
+        // Enlarge dots
+        const tdot = svg.getElementById('tdot-' + tpid + '-' + i);
+        const sdot = svg.getElementById('sdot-' + tpid + '-' + i);
+        if (tdot) tdot.setAttribute('r', '6');
+        if (sdot) sdot.setAttribute('r', '5');
+
+        // Build tooltip
+        let html = '<div class="cpt-month">' + month + '</div>';
+        html += '<div class="cpt-row"><span class="cpt-label">Total ACR</span><span class="cpt-val cpt-total">' + fmtD(v) + '</span></div>';
+        html += '<div class="cpt-row"><span class="cpt-label">SQL-Adjacent</span><span class="cpt-val cpt-sql">' + fmtD(sqlV) + ' (' + sqlPct + '%)</span></div>';
+        html += '<div class="cpt-row"><span class="cpt-label">Non-SQL</span><span class="cpt-val" style="color:var(--text-muted)">' + fmtD(v - sqlV) + '</span></div>';
+
+        if (prevV !== null) {
+          const totalDelta = v - prevV;
+          const sqlDelta = sqlV - prevSql;
+          const totalDPct = prevV > 0 ? ((totalDelta / prevV) * 100).toFixed(1) : '—';
+          const sqlDPct = prevSql > 0 ? ((sqlDelta / prevSql) * 100).toFixed(1) : '—';
+          const tCls = totalDelta >= 0 ? 'cpt-up' : 'cpt-down';
+          const sCls = sqlDelta >= 0 ? 'cpt-up' : 'cpt-down';
+          html += '<div class="cpt-delta">';
+          html += '<div class="cpt-row"><span class="cpt-label">Total MoM</span><span class="' + tCls + '">' + (totalDelta >= 0 ? '+' : '') + fmtD(totalDelta) + ' (' + (totalDelta >= 0 ? '+' : '') + totalDPct + '%)</span></div>';
+          html += '<div class="cpt-row"><span class="cpt-label">SQL MoM</span><span class="' + sCls + '">' + (sqlDelta >= 0 ? '+' : '') + fmtD(sqlDelta) + ' (' + (sqlDelta >= 0 ? '+' : '') + sqlDPct + '%)</span></div>';
+          html += '</div>';
+        }
+
+        tip.innerHTML = html;
+        tip.classList.add('visible');
+      });
+
+      zone.addEventListener('mousemove', function(e) {
+        const rect = wrapper.getBoundingClientRect();
+        let left = e.clientX - rect.left + 16;
+        // Flip to left side if near right edge
+        if (left + 200 > rect.width) left = e.clientX - rect.left - 200;
+        tip.style.left = left + 'px';
+        tip.style.top = (e.clientY - rect.top - 10) + 'px';
+      });
+
+      zone.addEventListener('mouseleave', function() {
+        const i = parseInt(this.dataset.idx);
+        const hline = svg.getElementById('hline-' + tpid + '-' + i);
+        if (hline) hline.setAttribute('opacity', '0');
+        const tdot = svg.getElementById('tdot-' + tpid + '-' + i);
+        const sdot = svg.getElementById('sdot-' + tpid + '-' + i);
+        if (tdot) tdot.setAttribute('r', '4');
+        if (sdot) sdot.setAttribute('r', '3');
+        tip.classList.remove('visible');
+      });
+    });
+  }
+})();
+</script>
+` : ''}
 
 ${Array.isArray(narrative.takeaways) && narrative.takeaways.length ? `
 <!-- Key Takeaways -->
@@ -1415,6 +2078,17 @@ ${Array.isArray(narrative.takeaways) && narrative.takeaways.length ? `
   document.querySelector('.header').addEventListener('click', (e) => {
     if (e.target.closest('.export-btn')) return;
     if (++clicks === 3) { document.getElementById('egg').classList.add('show'); clicks = 0; }
+  });
+
+  // Expandable detail rows
+  document.querySelectorAll('.expand-toggle').forEach(row => {
+    row.addEventListener('click', () => {
+      const id = row.getAttribute('data-detail');
+      const detail = document.getElementById(id);
+      if (!detail) return;
+      const isOpen = row.classList.toggle('open');
+      detail.classList.toggle('open', isOpen);
+    });
   });
 </script>
 

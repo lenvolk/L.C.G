@@ -13,7 +13,7 @@ Today is {{TODAY}}. Build the weekly channel summary for high-signal wins and ri
   - Prior summary note for continuity (if available)
 2. Pull channel data from the last 7 days for target channels:
   - Winning Wednesdays
-  - Patty D Deal Summaries
+  - Leadership Deal Summaries
   - STU team channels
   - Win wire / HLS channels (when accessible)
 3. Extract only high-signal items:
@@ -71,7 +71,7 @@ Use this exact shape:
 
 ## Channel Coverage
 - Winning Wednesdays: COVERED|MISSING
-- Patty D Deal Summaries: COVERED|MISSING
+- Leadership Deal Summaries: COVERED|MISSING
 - STU channels: COVERED|MISSING
 - Win wire / HLS: COVERED|MISSING
 

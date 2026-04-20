@@ -29,7 +29,7 @@ msft_team:
 
 # {ProjectName}
 
-**Customer:** `INPUT[suggester(option(Asurion), option(Bank of America), option(BD), option(BlueKC), option(Cencora), option(Cigna), option(EPIC), option(Fiserv), option(Illumina), option(Omnicell), option(Optum), option(PayPal), option(R1), option(R1 RCM), option(Rogers), option(Stryker), option(WPS)):customer]`
+**Customer:** `INPUT[suggester(option({CustomerA}), option({CustomerB}), option({CustomerC})):customer]`
 **Status:** `INPUT[inlineSelect(option(active), option(on-hold), option(completed), option(archived)):status]`
 **Type:** `INPUT[inlineSelect(option(poc), option(demo), option(engagement), option(internal), option(discovery)):type]`
 **Priority:** `INPUT[inlineSelect(option(high), option(medium), option(low)):priority]`

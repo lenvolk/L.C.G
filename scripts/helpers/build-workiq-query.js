@@ -11,7 +11,7 @@
  *   node scripts/helpers/build-workiq-query.js \
  *     --goal "decision log" \
  *     --sources meetings,chats \
- *     --entities "Adam Ziesmer,Blue KC" \
+ *     --entities "Jane Doe,Contoso" \
  *     --time-window 14d \
  *     --topic "PriorAuth"
  *

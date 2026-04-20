@@ -147,7 +147,7 @@ After delegation returns, run the helper pipeline locally:
 
 ```bash
 cat /tmp/cal-raw-<date>.json \
-  | node scripts/helpers/normalize-calendar.js --tz America/Chicago --user-email jin.lee@microsoft.com \
+  | node scripts/helpers/normalize-calendar.js --tz America/Chicago --user-email user@example.com \
   | node scripts/helpers/score-meetings.js --vip-list "$VAULT_DIR/_lcg/vip-list.md"
 ```
 

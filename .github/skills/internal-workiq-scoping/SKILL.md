@@ -78,7 +78,7 @@ Use `build-workiq-query.js` to construct properly scoped WorkIQ prompts instead 
 node scripts/helpers/build-workiq-query.js \
   --goal "action items from PriorAuth sync" \
   --sources meetings,chats \
-  --entities "Adam Ziesmer,Blue KC" \
+  --entities "Jane Doe,Contoso" \
   --time-window 7d \
   --topic "PriorAuth" \
   --output-shape actions

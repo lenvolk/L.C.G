@@ -25,7 +25,7 @@ Normalizes raw `calendar:ListCalendarView` JSON into compact event data.
 ```bash
 node scripts/helpers/normalize-calendar.js /tmp/cal-raw.json \
   --tz America/Chicago \
-  --user-email jin.lee@microsoft.com
+  --user-email user@example.com
 ```
 
 ### score-meetings.js
@@ -62,7 +62,7 @@ Builds properly scoped WorkIQ prompts from structured inputs. Prevents malformed
 node scripts/helpers/build-workiq-query.js \
   --goal "action items from PriorAuth sync" \
   --sources meetings,chats \
-  --entities "Adam Ziesmer,Blue KC" \
+  --entities "Jane Doe,Contoso" \
   --time-window 7d \
   --topic "PriorAuth" \
   --output-shape actions
@@ -77,7 +77,7 @@ node scripts/helpers/build-workiq-query.js \
 ```bash
 # Full calendar pipeline
 cat /tmp/cal-raw-2026-03-26.json \
-  | node scripts/helpers/normalize-calendar.js --tz America/Chicago --user-email jin.lee@microsoft.com \
+  | node scripts/helpers/normalize-calendar.js --tz America/Chicago --user-email user@example.com \
   | node scripts/helpers/score-meetings.js --vip-list "$VAULT_DIR/_lcg/vip-list.md" \
   > /tmp/cal-scored-2026-03-26.json
 

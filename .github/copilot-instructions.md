@@ -145,7 +145,7 @@ All vault notes MUST be formatted for rapid visual scanning in Obsidian. Follow 
 | ❌ | Missing or blocked | `❌ No prep materials found` |
 | ✅ | Completed or ready | `✅ Brief ready, no action needed` |
 | 📉 | Risk or declining trend | `📉 9 days to due date, no progress` |
-| 👤 | Owner or person reference | `👤 **Jin Lee**` |
+| 👤 | Owner or person reference | `👤 **{Owner Name}**` |
 | 📅 | Due date or date reference | `📅 due **3/28**` |
 | ⏰ | Deadline or time constraint | `⏰ **by 10:45 AM**` |
 | 💡 | Context, rationale, or idea | `💡 Blocks $4M/mo consumption uplift` |

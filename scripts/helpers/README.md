@@ -21,7 +21,7 @@ Reusable Node.js CLI scripts for normalizing, scoring, and formatting M365 data 
 ```bash
 # 1. Have @m365-actions save raw ListCalendarView JSON to file
 # 2. Normalize
-node scripts/helpers/normalize-calendar.js /tmp/cal-raw.json --tz America/Chicago --user-email jin.lee@microsoft.com > /tmp/cal-normalized.json
+node scripts/helpers/normalize-calendar.js /tmp/cal-raw.json --tz America/Chicago --user-email user@example.com > /tmp/cal-normalized.json
 
 # 3. Score + detect conflicts
 node scripts/helpers/score-meetings.js /tmp/cal-normalized.json --vip-list "$VAULT_DIR/_lcg/vip-list.md" > /tmp/cal-scored.json
@@ -40,7 +40,7 @@ node scripts/helpers/normalize-mail.js /tmp/mail-raw.json --vip-list "$VAULT_DIR
 node scripts/helpers/build-workiq-query.js \
   --goal "action items from PriorAuth sync" \
   --sources meetings,chats \
-  --entities "Adam Ziesmer,Blue KC" \
+  --entities "Jane Doe,Contoso" \
   --time-window 7d \
   --topic "PriorAuth" \
   --output-shape actions

@@ -1,7 +1,7 @@
 ---
 name: triage-win-digest
-description: 'Build reusable executive summaries from Win Room / Winning Wednesdays, Win Wire, Patty D deal recaps, and STU/HLS channel updates using bounded retrieval and evidence-backed formatting. Triggers: winning wednesdays summary, patty d deal summary, win wire digest, STU highlights, HLS channel recap, weekly wins summary.'
-argument-hint: 'Provide time window, target streams (Winning Wednesdays, Patty D, Win Wire, STU/HLS), and preferred output (email draft, markdown brief, or table).'
+description: 'Build reusable executive summaries from Win Room / Winning Wednesdays, Win Wire, leadership deal recaps, and STU/HLS channel updates using bounded retrieval and evidence-backed formatting. Triggers: winning wednesdays summary, leadership deal summary, win wire digest, STU highlights, HLS channel recap, weekly wins summary.'
+argument-hint: 'Provide time window, target streams (Winning Wednesdays, Leadership Recaps, Win Wire, STU/HLS), and preferred output (email draft, markdown brief, or table).'
 ---
 
 # Executive Win Digest
@@ -11,7 +11,7 @@ Create a concise, leadership-ready summary from mixed mail and Teams signals whi
 ## Use When
 
 - User asks for Winning Wednesdays summary or Win Room recap
-- User asks for Patty D deal summaries or similar variants
+- User asks for leadership deal summaries or similar variants
 - User asks for Win Wire digest
 - User asks for STU/HLS highlights with action-oriented output
 
@@ -30,7 +30,7 @@ Create a concise, leadership-ready summary from mixed mail and Teams signals whi
 ## Query Variants To Include
 
 - Winning Wednesdays: "Winning Wednesdays", "Win Room", "WW recap", "Winning Weds"
-- Patty D: "Patty D", "Patty Dilger", "Patty Dilger-Vivian", "Patty Carrolo"
+- Leadership recaps: populate with actual leader display-name variants from your vault VIP list
 - Deal summary variants: "deal summary", "deal overview", "commercial summary", "MACC summary"
 - Win wire variants: "Win Wire", "WinWire", "HLS Win Wire", "wins wire"
 - STU variants: "STU highlights", "STU recap", "STU update", "Friday Huddle", "STU/CSU sync"

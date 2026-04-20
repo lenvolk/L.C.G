@@ -330,3 +330,161 @@ SUMMARIZECOLUMNS(
 )
 ORDER BY [ACR] DESC
 ```
+
+---
+
+## Azure All-in-One (AIO) Cross-Reference Queries (Step 2.5)
+
+These queries target the **MSA_AzureConsumption_Enterprise** model (`726c8fed-367a-4249-b685-e4e22ca82b3d`). They enrich the SQL600 readout with account-level month-over-month ACR and service/workload breakdowns from the full Azure consumption view.
+
+> **⚠️ Different model ID.** All AIO queries use `semanticModelId: "726c8fed-367a-4249-b685-e4e22ca82b3d"` — NOT the SQL600 model. Pass the correct model ID to each `powerbi-remote:ExecuteQuery` call.
+
+> **⚠️ Base filters.** All AIO queries MUST include:
+> - `'DimViewType'[ViewType] = "Curated"`
+> - Date scope via `'DimDate'[IsAzureClosedAndCurrentOpen] = "Y"` (YTD) or `'DimDate'[FY_Rel] = "FY"` (full FY)
+
+### TPID List Construction
+
+Before running AIO queries, build the TPID list from SQL600 results:
+
+```
+Collect all unique TPIDs from:
+  - topAccounts[].TPID (Q5 results)
+  - renewals[].TPID (Q6 results)
+  - gapAccounts[].TPID (Q8 results)
+
+Deduplicate. Format as: {629368, 8012737, 1627751, ...}
+```
+
+### QA0 — DimDate Schema Probe (run once)
+
+**Purpose:** Discover the month-grain column name in the AIO model's DimDate table. Required before QA1.
+
+**Artifact ID:** `726c8fed-367a-4249-b685-e4e22ca82b3d`
+
+```dax
+EVALUATE
+TOPN(1, 'DimDate')
+```
+
+Inspect the returned columns for a fiscal-month-grain column. Look for (in preference order):
+1. `FiscalYearMonth` — e.g. `"Mar 2026"` or `"FY26-Mar"`
+2. `MonthStartDate` — e.g. `2026-03-01T00:00:00`
+3. `CalendarYearMonth` — e.g. `"2026-03"`
+4. `FiscalMonth` — DateTime
+5. Any column with "Month" in the name at a monthly grain
+
+Cache the discovered column as `<MONTH_COL>` for QA1 and QA2. If multiple month-grain columns exist, prefer the one that produces readable labels (text > DateTime).
+
+### QA1 — Account-Level Monthly ACR Trend (AIO)
+
+**Purpose:** Month-over-month ACR per SQL600 account from the full Azure consumption view. Shows consumption trajectory at the account × month grain.
+
+**Artifact ID:** `726c8fed-367a-4249-b685-e4e22ca82b3d`
+
+| Parameter | Value |
+|---|---|
+| Filter | YTD closed months + current open, Curated view, TPID list from SQL600 |
+| Sort | Account ASC, Month ASC |
+| Row limit | TPID count × 12 months (typically < 500 rows) |
+
+```dax
+EVALUATE
+SUMMARIZECOLUMNS(
+    'DimCustomer'[TPID],
+    'DimCustomer'[TPAccountName],
+    'DimDate'[<MONTH_COL>],
+    TREATAS({<TPID_LIST>}, 'DimCustomer'[TPID]),
+    FILTER('DimDate', 'DimDate'[IsAzureClosedAndCurrentOpen] = "Y"),
+    'DimViewType'[ViewType] = "Curated",
+    "ACR", 'M_ACR'[$ ACR]
+)
+ORDER BY 'DimCustomer'[TPAccountName] ASC, 'DimDate'[<MONTH_COL>] ASC
+```
+
+> **Column substitution:** Replace `<MONTH_COL>` with the column discovered in QA0. Replace `<TPID_LIST>` with the deduplicated list from all SQL600 account results.
+
+### QA2 — Account × Service Pillar ACR Breakdown (AIO)
+
+**Purpose:** ACR broken down by Azure strategic pillar for each SQL600 account. Shows WHERE consumption is happening (Data & AI, Infra, etc.) — critical for identifying SQL-adjacent workloads and migration readiness.
+
+**Artifact ID:** `726c8fed-367a-4249-b685-e4e22ca82b3d`
+
+| Parameter | Value |
+|---|---|
+| Filter | Current FY, Curated view, TPID list from SQL600 |
+| Sort | Account ASC, ACR DESC |
+
+```dax
+EVALUATE
+SUMMARIZECOLUMNS(
+    'DimCustomer'[TPID],
+    'DimCustomer'[TPAccountName],
+    'DimDate'[<MONTH_COL>],
+    'F_AzureConsumptionPipe'[StrategicPillar],
+    TREATAS({<TPID_LIST>}, 'DimCustomer'[TPID]),
+    FILTER('DimDate', 'DimDate'[IsAzureClosedAndCurrentOpen] = "Y"),
+    'DimViewType'[ViewType] = "Curated",
+    "ACR", 'M_ACR'[$ ACR]
+)
+ORDER BY 'DimCustomer'[TPAccountName] ASC, [ACR] DESC
+```
+
+> **Note:** This query joins ACR actuals with the pipeline pillar dimension. If the model does not cross-filter ACR facts to `F_AzureConsumptionPipe` dimensions, use the ACR fact's own pillar column instead. Verify on first run. If this query returns empty or errors, fall back to QA2-ALT.
+
+#### QA2-ALT — Pillar Breakdown via Pipeline Only
+
+If QA2 fails because ACR facts and pipeline facts don't share a pillar dimension:
+
+```dax
+EVALUATE
+SUMMARIZECOLUMNS(
+    'DimCustomer'[TPID],
+    'DimCustomer'[TPAccountName],
+    'F_AzureConsumptionPipe'[StrategicPillar],
+    'F_AzureConsumptionPipe'[SolutionPlay],
+    TREATAS({<TPID_LIST>}, 'DimCustomer'[TPID]),
+    'DimDate'[FY_Rel] = "FY",
+    'DimViewType'[ViewType] = "Curated",
+    'F_AzureConsumptionPipe'[MilestoneStatus] IN {"In Progress", "Not Started", "Blocked"},
+    "PipelineACR", 'M_ACRPipe'[$ Consumption Pipeline All]
+)
+ORDER BY 'DimCustomer'[TPAccountName] ASC, [PipelineACR] DESC
+```
+
+### QA3 — Budget Attainment per Account (AIO)
+
+**Purpose:** Budget attainment overlay for SQL600 accounts. Shows which accounts are ahead/behind target — informs prioritization alongside the SQL600 pipeline view.
+
+**Artifact ID:** `726c8fed-367a-4249-b685-e4e22ca82b3d`
+
+| Parameter | Value |
+|---|---|
+| Filter | YTD, Curated view, TPID list from SQL600 |
+| Sort | ACR YTD DESC |
+
+```dax
+EVALUATE
+SUMMARIZECOLUMNS(
+    'DimCustomer'[TPID],
+    'DimCustomer'[TPAccountName],
+    TREATAS({<TPID_LIST>}, 'DimCustomer'[TPID]),
+    FILTER('DimDate', 'DimDate'[IsAzureClosedAndCurrentOpen] = "Y"),
+    'DimViewType'[ViewType] = "Curated",
+    "ACR_YTD", 'M_ACR'[$ ACR],
+    "ACR_LCM", 'M_ACR'[$ ACR Last Closed Month],
+    "BudgetAttainPct", 'M_ACR'[% ACR Budget Attain (YTD)]
+)
+ORDER BY [ACR_YTD] DESC
+```
+
+### AIO Query Batching
+
+All AIO queries target the same semantic model. Batch into **1–2 calls**:
+
+| Batch | Queries | Notes |
+|---|---|---|
+| AIO Batch 1 | QA0 + QA1 + QA3 | Schema probe + MoM trend + budget attainment |
+| AIO Batch 2 | QA2 (or QA2-ALT) | Service breakdown (may need fallback) |
+
+If QA0 reveals the month column and all queries can be templated in advance, combine into a single `daxQueries` array call.

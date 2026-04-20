@@ -78,7 +78,7 @@ Frontloads Outlook mail topology knowledge and provides retrieval strategies tha
 | KQL Property | Example | Notes |
 |---|---|---|
 | `from:` | `from:satyan@microsoft.com` | Sender email or display name |
-| `to:` | `to:jinle@microsoft.com` | Recipient |
+| `to:` | `to:user@microsoft.com` | Recipient |
 | `subject:` | `subject:"Quarterly Review"` | Subject line (quote phrases) |
 | `body:` | `body:proposal` | Message body content |
 | `received:` | `received:2026-03-01..2026-03-14` | Date range (ISO format) |

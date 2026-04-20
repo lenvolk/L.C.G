@@ -132,9 +132,9 @@ Load `_shared/engagement-routing-rules.md` for the full decision matrix. Key rul
 
 | Customer | Route To | Person | Key Signal | Next Step |
 |---|---|---|---|---|
-| Blue KC | **SE** (self) | — | SQL mod gap, 450 cores | Schedule mod discovery with **{Specialist}** |
-| Humana | **CSA** | **{name}** | Architecture review | Post-commitment review by {date} |
-| Anthem | ⚠️ No pipeline | — | 800 SQL Cores, zero opps | **{Specialist}**: Create SQL mod opp |
+| Contoso | **SE** (self) | — | SQL mod gap, 450 cores | Schedule mod discovery with **{Specialist}** |
+| Northwind | **CSA** | **{name}** | Architecture review | Post-commitment review by {date} |
+| Woodgrove | ⚠️ No pipeline | — | 800 SQL Cores, zero opps | **{Specialist}**: Create SQL mod opp |
 
 ### Flagged Accounts (detail)
 ... per-account detail only for at-risk, gap, or routed items ...

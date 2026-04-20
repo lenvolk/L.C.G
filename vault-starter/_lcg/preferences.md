@@ -19,8 +19,8 @@ Apply these labels consistently during inbox and calendar triage.
 - `P3` — Newsletters, distro noise, automated alerts
 
 ### Type (pick one)
-- `customer` — External-facing engagement (BlueKC, Rogers, Stryker, Cencora, BD, etc.)
-- `partner` — Partner-facing (Epic, Ontinue, McKinsey)
+- `customer` — External-facing engagement
+- `partner` — Partner-facing
 - `internal` — 1:1s, team syncs, v-team calls
 - `enablement` — Tech talks, office hours, training, conferences
 - `ops` — Capacity, pipeline hygiene, CRM follow-up, PAT renewals

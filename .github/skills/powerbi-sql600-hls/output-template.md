@@ -39,7 +39,8 @@ accts_with_mod_pipe: <int>
 accts_without_mod_pipe: <int>
 gap_account_count: <int>
 industry_rank: <int>
-readout_mode: "<Full|Accounts|Renewal|Modernization|Trend|Ranking|AccountDrill>"
+readout_mode: "<Full|Accounts|Renewal|Modernization|Trend|Ranking|AIODeepDive|AccountDrill>"
+aio_data_available: <true|false>
 ---
 ```
 
@@ -181,6 +182,46 @@ readout_mode: "<Full|Accounts|Renewal|Modernization|Trend|Ranking|AccountDrill>"
 | <TopParent> | <TPID> | <vertical> | <acr> | <uncommitted> | <cores> |
 
 > <competitive narrative — what HLS customers aren't spending with us, they're spending with GCP. DB mod positioning directly competes with GCP capture.>
+
+---
+
+## 🔍 Azure Consumption Deep Dive (AIO Cross-Reference)
+
+> **Source:** MSA_AzureConsumption_Enterprise (Azure All-in-One)
+> Only present when AIO data is available. If AIO queries were skipped or failed, omit this entire section.
+
+### Account MoM ACR Heatmap
+
+| Account | TPID | <Mon 1> | <Mon 2> | <Mon 3> | ... | <Mon N> | MoM Δ | Direction |
+|---|---|---|---|---|---|---|---|---|
+<for each account, months as columns:>
+| <TopParent> | <TPID> | <$ACR> | <$ACR> | <$ACR> | ... | <$ACR> | <$change> | <↑/↓/→> |
+
+> <MoM narrative — call out accounts with sustained growth vs. declining trajectories. Correlate with SQL600 pipeline state: accounts growing consumption without modernization pipeline represent untapped SQL conversion opportunity.>
+
+### Service Pillar Mix (ACR by Strategic Pillar)
+
+| Account | TPID | Data & AI | Infra | Digital & App | Security | Modern Work | BizApps | SQL-Adjacent % |
+|---|---|---|---|---|---|---|---|---|
+<for each account:>
+| <TopParent> | <TPID> | <$ACR> | <$ACR> | <$ACR> | <$ACR> | <$ACR> | <$ACR> | <pct of Data&AI + Infra> |
+
+> <service mix narrative — highlight accounts where SQL-adjacent pillars (Data & AI + Infra) are a large share of total spend (high modernization leverage) vs. accounts where they're small (untapped). Flag where Migrate & Modernize solution play is active vs. absent.>
+
+### Budget Attainment Overlay
+
+| Account | TPID | ACR YTD | ACR LCM | Budget Attain % | Signal |
+|---|---|---|---|---|---|
+<for each account, sorted by attainment ASC:>
+| <TopParent> | <TPID> | <$ACR> | <$ACR> | <pct> | <signal> |
+
+**Signal logic:**
+- **🟢 Ahead** — Budget attainment ≥ 100%
+- **🟡 On track** — Budget attainment 80–99%
+- **🔴 Below target** — Budget attainment < 80%
+- **⚫ No data** — Budget attainment not available
+
+> <budget narrative — flag accounts below 80% attainment with SQL600 pipeline context. Accounts below target AND without committed SQL pipeline need immediate attention.>
 
 ---
 

@@ -10,7 +10,7 @@
  *   cat /tmp/cal-raw.json | node scripts/helpers/normalize-calendar.js
  *   node scripts/helpers/normalize-calendar.js /tmp/cal-raw.json
  *   node scripts/helpers/normalize-calendar.js /tmp/cal-raw.json --tz America/Chicago
- *   node scripts/helpers/normalize-calendar.js /tmp/cal-raw.json --user-email jin.lee@microsoft.com
+ *   node scripts/helpers/normalize-calendar.js /tmp/cal-raw.json --user-email user@example.com
  *
  * Options:
  *   --tz <timezone>         IANA timezone for local time display (default: America/Chicago)

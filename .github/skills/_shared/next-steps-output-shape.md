@@ -21,7 +21,7 @@ Lead with what to do. Follow with why. Never present raw data without interpreta
 
 - Next steps use imperative voice: "Schedule architecture review with CSA" not "An architecture review could be considered"
 - Each next step names an **owner by name and role** — resolved from MSX deal team, not generic titles
-  - E.g., "**Sarah Kim** (CSA): Review architecture feasibility by Friday" not "CSA should review"
+  - E.g., "**{CSA Name}** (CSA): Review architecture feasibility by Friday" not "CSA should review"
 - When deal team is available, ALWAYS use named people
 - Fall back to role titles only for resources outside the deal team (FDE, Engineering, OCTO)
 - At-risk items use `⚠️` prefix; zero-pipeline uses `⚠️ No active pipeline`
@@ -33,8 +33,8 @@ Lead with what to do. Follow with why. Never present raw data without interpreta
 
 | Don't | Do instead |
 |---|---|
-| "Pipeline: $2.3M across 4 opps" (no action) | "Pipeline: $2.3M across 4 opps — 2 are at-risk (past close date). **Next:** **Jin Lee** (SE) review milestones with **John Smith** (Specialist) by Friday." |
-| "No pipeline found" (FYI only) | "⚠️ No active pipeline. **Next:** **Jin Lee** (SE) schedule positioning conversation with **John Smith** (Specialist) before committing FDE resources." |
-| "CSA should review" (generic role) | "**Sarah Kim** (CSA): Review architecture feasibility by Friday" |
+| "Pipeline: $2.3M across 4 opps" (no action) | "Pipeline: $2.3M across 4 opps — 2 are at-risk (past close date). **Next:** **{SE Name}** (SE) review milestones with **{Specialist Name}** (Specialist) by Friday." |
+| "No pipeline found" (FYI only) | "⚠️ No active pipeline. **Next:** **{SE Name}** (SE) schedule positioning conversation with **{Specialist Name}** (Specialist) before committing FDE resources." |
+| "CSA should review" (generic role) | "**{CSA Name}** (CSA): Review architecture feasibility by Friday" |
 | 15-bullet context dump | 3 next steps + 4 supporting context bullets |
 | Data table with no interpretation | Summary table grouped by routing recommendation, flagged items only |

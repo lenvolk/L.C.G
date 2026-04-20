@@ -31,13 +31,13 @@ import OpenAI from "openai";
 const args = process.argv.slice(2);
 let dataPath = null;
 let model = "gpt-4.1-mini";
-let concurrency = 8;
+let concurrency = 3;
 let dryRun = false;
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--model" && args[i + 1]) model = args[++i];
   else if (args[i] === "--concurrency" && args[i + 1])
-    concurrency = parseInt(args[++i], 10) || 8;
+    concurrency = parseInt(args[++i], 10) || 3;
   else if (args[i] === "--dry-run") dryRun = true;
   else if (!args[i].startsWith("-")) dataPath = args[i];
 }
@@ -141,18 +141,37 @@ function sanitizeNextStep(text) {
   return clean;
 }
 
+async function withRetry(fn, retries = 3) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const status = err.status || err.statusCode || 0;
+      if (status === 429 && attempt < retries) {
+        const delay = Math.min(2000 * 2 ** attempt, 30000);
+        process.stderr.write(`  ⏳ Rate limited, waiting ${delay / 1000}s before retry…\n`);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 async function generateNextStep(acct, section, snapshot) {
   const userContent = buildAccountContext(acct, section, snapshot);
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: userContent },
-    ],
-    max_tokens: 150,
-    temperature: 0.3,
+  return withRetry(async () => {
+    const response = await client.chat.completions.create({
+      model,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userContent },
+      ],
+      max_tokens: 150,
+      temperature: 0.3,
+    });
+    return sanitizeNextStep(response.choices[0]?.message?.content || '');
   });
-  return sanitizeNextStep(response.choices[0]?.message?.content || '');
 }
 
 const MODERNIZATION_OUTLOOK_PROMPT = `You are a SQL Server modernization strategist for Microsoft's Healthcare SQL600 program.
@@ -176,16 +195,18 @@ async function generateModernizationOutlook(snapshot) {
     `Annualized growth: ${fmtDollar(snapshot.AnnualizedGrowth)}`,
   ].join("\n");
 
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      { role: "system", content: MODERNIZATION_OUTLOOK_PROMPT },
-      { role: "user", content: metrics },
-    ],
-    max_tokens: 250,
-    temperature: 0.3,
+  return withRetry(async () => {
+    const response = await client.chat.completions.create({
+      model,
+      messages: [
+        { role: "system", content: MODERNIZATION_OUTLOOK_PROMPT },
+        { role: "user", content: metrics },
+      ],
+      max_tokens: 250,
+      temperature: 0.3,
+    });
+    return (response.choices[0]?.message?.content || "").trim();
   });
-  return (response.choices[0]?.message?.content || "").trim();
 }
 
 // ── Parallel execution with concurrency limit ────────────────────────

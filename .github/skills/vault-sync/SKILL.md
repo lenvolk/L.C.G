@@ -521,7 +521,7 @@ Scans existing project notes (`Projects/` folder) for missing or inconsistent fr
 - **Existing `## Open Items` heading**: Treat as equivalent to `## Action Items` — don't add a duplicate. Prefer `## Open Items` when creating new sections.
 - **Meta Bind INPUT fields**: If the block of `INPUT[...]` fields exists below the H1, preserve it. When creating new project notes, include the Meta Bind block from the template.
 - **Projects without `customer`**: Valid (internal projects). Skip Related backlink check.
-- **Sub-folder projects** (e.g., `Projects/SYK - Project Orpheus/`): Process the main `.md` file, not sub-files.
+- **Sub-folder projects** (e.g., `Projects/ACME - Project Alpha/`): Process the main `.md` file, not sub-files.
 
 ---
 
@@ -621,30 +621,20 @@ When a sync mode creates a new vault note, it reads the corresponding template f
 
 ### Customer Name Mapping
 
-Map CRM names to vault folder names:
+Map CRM names to vault folder names. Populate this table with your own customer mappings:
 
 | CRM | Vault |
 |-----|-------|
-| STRYKER CORPORATION | Stryker |
-| Unitedhealth Group | UHG |
-| BCBS OF KANSAS CITY | BlueKC |
-| Mass General Brigham (Partners) | MGB |
-| R1 RCM Inc | R1 |
-| Carefirst Blue Cross Blue Shield of Maryland | CareFirst |
-| CHILDRENS HOSPITAL COLORADO | CHCO |
-| CIGNA CORPORATION | Cigna |
-| ILLUMINA INC | Illumina |
-| INCYTE GENOMICS | Incyte |
-| EPIC SYSTEMS CORPORATION | EPIC |
-| Cencora (AmerisourceBergen) | Cencora |
-| ASURION INSURANCE SERVICES INC | Asurion |
+| ACME CORPORATION | Acme |
+| Contoso Ltd | Contoso |
+| NORTHWIND TRADERS INC | Northwind |
 
 Use `oil:get_customer_context` for dynamic resolution when mapping is missing.
 
 ### Name Normalization
 
-- Strip parenthetical suffixes: `"Andrea Welker (She/Her)"` → `"Andrea Welker"`
-- Strip role parentheticals: `"Joey Schluchter (GBB)"` → `"Joey Schluchter"`
+- Strip parenthetical suffixes: `"Jane Smith (She/Her)"` → `"Jane Smith"`
+- Strip role parentheticals: `"John Doe (GBB)"` → `"John Doe"`
 - Vault filename: spaces preserved, special characters removed.
 - CRM name differs from vault → add CRM name as `aliases` in frontmatter.
 

@@ -1,9 +1,9 @@
 ---
 agent: Chief of Staff
 ---
-# Patty D Deal Summary Draft
+# Leadership Deal Summary Draft
 
-Today is {{TODAY}}. Build a deal-summary draft package in Patty D style from the last {{WINDOW_DAYS}} days.
+Today is {{TODAY}}. Build a deal-summary draft package in leadership recap style from the last {{WINDOW_DAYS}} days.
 
 ## Steps
 
@@ -12,11 +12,7 @@ Today is {{TODAY}}. Build a deal-summary draft package in Patty D style from the
 - _lcg/preferences.md
 - _lcg/communication-style.md
 
-2. Pull source candidates from mail and Teams using name and alias variants:
-
-- pattycarrolo
-- Patty Carrolo
-- Patty D
+2. Pull source candidates from mail and Teams using leader name and alias variants from your vault VIP list.
 
 3. Include naming variants for artifacts:
 
@@ -27,7 +23,7 @@ Today is {{TODAY}}. Build a deal-summary draft package in Patty D style from the
 - value changes, close movement, milestone shifts, escalation asks.
 
 5. Build one concise summary card per deal.
-6. Persist output via OIL to Weekly/{{TODAY}}-patty-d-deal-summary.md:
+6. Persist output via OIL to Weekly/{{TODAY}}-leadership-deal-summary.md:
 
 - Call `oil:get_note_metadata` for that path.
 - If the note exists: use `oil:atomic_replace` with `mtime_ms` as `expected_mtime`.
@@ -38,11 +34,11 @@ Today is {{TODAY}}. Build a deal-summary draft package in Patty D style from the
 
 - Draft only. Never send.
 - No CRM writes.
-- If direct Patty D phrasing is missing, produce best-match output and label it as inferred-source pattern.
+- If direct leadership phrasing is missing, produce best-match output and label it as inferred-source pattern.
 
 ## Output Format
 
-# Patty D Deal Summary -
+# Leadership Deal Summary -
 
 ## Headline
 

@@ -37,7 +37,7 @@ With the modular architecture below, the **engagement intake** workflow can be b
 - `powerbi-sql600-hls` → SQL footprint and modernization coverage (when customer is SQL600)
 - `activity-recording` workflow → log the intake and routing decision as a CRM activity
 
-No new duplication. One decision tree to maintain. The SQL modernization lens is written once and consumed by engagement-intake, the SQL600 readout, and the tagging audit. Ad-hoc promptable: *"route this Contoso technical request"* or *"what's the SQL modernization play for Blue KC?"* compose the same pieces without loading monoliths.
+No new duplication. One decision tree to maintain. The SQL modernization lens is written once and consumed by engagement-intake, the SQL600 readout, and the tagging audit. Ad-hoc promptable: *"route this Contoso technical request"* or *"what's the SQL modernization play for Northwind?"* compose the same pieces without loading monoliths.
 
 ---
 
@@ -47,7 +47,7 @@ Skills carry duplicated policy across files because there is no formal separatio
 
 1. **Token waste** — The same rules (HoK legal gate, born-closed protocol, Unified constraints, write-gate authority, MCEM stage tables) are restated in 2–4 skills each. Every skill load pays for content the model already received from a sibling skill in the same session.
 2. **Drift risk** — When a rule changes (e.g. commit-gate criteria), every file that inlines it must be updated. Today there is no single-source-of-truth enforcement beyond `verify-instructions.js` checksums, which detect change but not inconsistency.
-3. **Composition friction** — Ad-hoc prompting (e.g. "scan last week and log SE activities for Blue KC only") requires loading `role-se-ms-activities` in full, even though the user only needs the activity-recording workflow scoped by a role lens. Skills can't be mixed-and-matched because each one bundles its own copy of cross-cutting policy.
+3. **Composition friction** — Ad-hoc prompting (e.g. "scan last week and log SE activities for Contoso only") requires loading `role-se-ms-activities` in full, even though the user only needs the activity-recording workflow scoped by a role lens. Skills can't be mixed-and-matched because each one bundles its own copy of cross-cutting policy.
 
 ### Evidence
 
@@ -297,7 +297,7 @@ cat /tmp/intake-opps-$DATE.json | node scripts/helpers/resolve-deal-teams.js
   "generated": "2026-04-20",
   "accounts": [
     {
-      "account": "Blue KC",
+      "account": "Contoso",
       "tpid": 123456,
       "opportunities": [
         {
@@ -312,10 +312,10 @@ cat /tmp/intake-opps-$DATE.json | node scripts/helpers/resolve-deal-teams.js
           ],
           "dealTeam": {
             "AE": { "name": "Jane Doe", "id": "..." },
-            "Specialist": { "name": "John Smith", "id": "..." },
-            "SE": { "name": "Jin Lee", "id": "..." },
+            "Specialist": { "name": "{Specialist Name}", "id": "..." },
+            "SE": { "name": "{SE Name}", "id": "..." },
             "CSA": null,
-            "CSAM": { "name": "Pat Kim", "id": "..." }
+            "CSAM": { "name": "{CSAM Name}", "id": "..." }
           }
         }
       ],
@@ -449,9 +449,9 @@ For multi-account output, the agent reads the resolved JSON and formats per `_sh
 
 | Customer | Route To | Person | Key Signal | Next Step |
 |---|---|---|---|---|
-| Blue KC | **SE** (self) | — | SQL mod gap, 450 cores | Schedule mod discovery with **John Smith** (Specialist) |
-| Humana | **CSA** | **Pat Kim** | Architecture review needed | Post-commitment review by 5/15 |
-| Anthem | ⚠️ No pipeline | — | 800 SQL Cores, zero opps | **Jane Doe** (Specialist): Create SQL mod opportunity |
+| Contoso | **SE** (self) | — | SQL mod gap, 450 cores | Schedule mod discovery with **{Specialist Name}** (Specialist) |
+| Northwind | **CSA** | **{CSA Name}** | Architecture review needed | Post-commitment review by 5/15 |
+| Woodgrove | ⚠️ No pipeline | — | 800 SQL Cores, zero opps | **{Specialist Name}** (Specialist): Create SQL mod opportunity |
 
 ### Flagged Accounts (detail)
 ... per-account detail only for at-risk, gap, or routed items ...
@@ -606,7 +606,7 @@ Lead with what to do. Follow with why. Never present raw data without interpreta
 ## Formatting Rules
 
 - Next steps use imperative voice: "Schedule architecture review with CSA" not "An architecture review could be considered"
-- Each next step names an **owner by name and role** — resolved from MSX deal team, not generic titles. E.g., "**Sarah Kim** (CSA): Review architecture feasibility by Friday" not "CSA should review"
+- Each next step names an **owner by name and role** — resolved from MSX deal team, not generic titles. E.g., "**{CSA Name}** (CSA): Review architecture feasibility by Friday" not "CSA should review"
 - When deal team is available, ALWAYS use named people. Fall back to role titles only for resources outside the deal team (FDE, Engineering, OCTO)
 - At-risk items use `⚠️` prefix; zero-pipeline uses `⚠️ No active pipeline`
 - Missing deal team roles use `⚠️ not assigned` — flag the gap as an action item itself
@@ -713,7 +713,7 @@ This pattern generalizes: when a sales program's taxonomy and detection rules ar
 - Model is cheap/fast (`gpt-4.1-mini`) — latency is acceptable for batch, not for interactive
 
 **Future consideration:**
-- For interactive use (engagement-intake asking "what's the next step for Blue KC?"), the LLM call adds 2-4s latency per account
+- For interactive use (engagement-intake asking "what's the next step for Contoso?"), the LLM call adds 2-4s latency per account
 - Alternative: pre-compute next steps during the nightly/weekly SQL600 readout run and cache in vault or `/tmp`; engagement-intake reads cached results instead of calling LLM
 - Alternative: rule-based next steps from `_shared/sql-modernization-lens.md` patterns (no LLM) for interactive, LLM for batch reports
 - Recommendation: **start with rule-based patterns for interactive routing, LLM for batch reports.** Revisit if rule-based quality is insufficient.
@@ -772,7 +772,7 @@ The `_shared/sql-modernization-lens.md` next-step patterns table is designed to 
 5. Add a scenario row to `role-execution-router` § Scenario Classification: *Technical Engagement Intake*.
 6. Optionally create `engagement-intake.prompt.md` for standard trigger phrases.
 
-**Validation:** Test with real scenarios: "route this Contoso technical request", "customer needs architecture help but has no pipeline", "should I engage FDE for this Blue KC issue?", "what's the SQL modernization play for Humana?", "review all SQL600 gap accounts".
+**Validation:** Test with real scenarios: "route this Contoso technical request", "customer needs architecture help but has no pipeline", "should I engage FDE for this Contoso issue?", "what's the SQL modernization play for Northwind?", "review all SQL600 gap accounts".
 
 ### Phase 4: Router diet (low risk)
 

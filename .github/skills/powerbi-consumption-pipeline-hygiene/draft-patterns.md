@@ -55,11 +55,11 @@ Best regards,
 | Severity | Pattern | Example |
 |---|---|---|
 | 🔴 CRITICAL | `URGENT: <Account> — <reason>` | `URGENT: Contoso Health — ACR Declining 15% MoM, No Pipeline` |
-| 🟡 HIGH (stale) | `Action Needed: <Account> — <N> Days in Stage` | `Action Needed: Blue KC — FY26 Optimization Opp 87 Days in Stage` |
-| 🟡 HIGH (milestone) | `Milestone Overdue: <Account> — <milestone name>` | `Milestone Overdue: Humana — Cloud Migration Phase 2` |
-| 🟡 HIGH (help-needed) | `Help Request: <Account> — <milestone name>` | `Help Request: BCBS — Data Platform Blockers` |
-| 🟠 MEDIUM (coverage) | `Pipeline Gap: <Account> — $<ACR> with No Active Pipeline` | `Pipeline Gap: Aetna — $1.2M ACR with No Active Pipeline` |
-| 🟠 MEDIUM (milestoneless) | `Execution Gap: <Account> — Pipeline with No Milestones` | `Execution Gap: Cigna — $450K Pipeline, No Milestones` |
+| 🟡 HIGH (stale) | `Action Needed: <Account> — <N> Days in Stage` | `Action Needed: Contoso — FY26 Optimization Opp 87 Days in Stage` |
+| 🟡 HIGH (milestone) | `Milestone Overdue: <Account> — <milestone name>` | `Milestone Overdue: Northwind — Cloud Migration Phase 2` |
+| 🟡 HIGH (help-needed) | `Help Request: <Account> — <milestone name>` | `Help Request: Fabrikam — Data Platform Blockers` |
+| 🟠 MEDIUM (coverage) | `Pipeline Gap: <Account> — $<ACR> with No Active Pipeline` | `Pipeline Gap: Woodgrove — $1.2M ACR with No Active Pipeline` |
+| 🟠 MEDIUM (milestoneless) | `Execution Gap: <Account> — Pipeline with No Milestones` | `Execution Gap: Litware — $450K Pipeline, No Milestones` |
 
 ## Body Template (HTML)
 

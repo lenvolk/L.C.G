@@ -103,9 +103,9 @@ The Teams self-chat (personal notepad / "chat with yourself") uses the special I
 Teams operations that target a specific person (chat lookup, message send, chat creation) require a **UPN** (User Principal Name) or Teams user ID. UPN is the user's actual sign-in address — it is often **different from** the user's alias or corporate email shorthand.
 
 **CRITICAL: UPN ≠ alias.** For example:
-- Alias: `jinle` → guessing `jinle@microsoft.com` **FAILS**
-- Actual UPN: `jin.lee@microsoft.com` → **WORKS**
-- Display name in Teams: "Jin Lee (HLS US SE)" → does not reveal UPN
+- Alias: `jdoe` → guessing `jdoe@microsoft.com` **FAILS**
+- Actual UPN: `jane.doe@microsoft.com` → **WORKS**
+- Display name in Teams: "Jane Doe (HLS US SE)" → does not reveal UPN
 
 **Never guess UPNs from aliases or display names.** Always resolve through the flow below.
 
@@ -151,7 +151,7 @@ oil:patch_note({
 ```
 
 **Vault person file frontmatter fields:**
-- `email` — UPN / email address (e.g., `jin.lee@microsoft.com` — NOT `jinle@microsoft.com`)
+- `email` — UPN / email address (e.g., `jane.doe@microsoft.com` — NOT `jdoe@microsoft.com`)
 - `teams_id` — Teams-specific user ID (GUID from chat member metadata, e.g., `c4259a64-c028-47b8-bd06-fe2041db8325`)
 
 **Best source for UPN + teams_id**: `teams:ListChatMembers({ chatId })` returns both fields definitively in every member entry.
@@ -305,7 +305,7 @@ For group chats, use `chatType: "group"` with multiple members. Resolve all memb
 | Multi-hop channel discovery on every call | Cache `teamId` + `channelId` after first resolution. Reuse for the session. |
 | Posting to wrong chat type | 1:1 chats use `PostMessage` with chatId; channels use `PostChannelMessage` with teamId + channelId. Always verify intent matches type before writing. |
 | Guessing UPNs without vault check | Always check `oil:get_person_context` first. Pattern-guessed UPNs fail for non-standard aliases and waste API calls. |
-| Assuming alias == UPN | `jinle` != `jin.lee@microsoft.com`. Many users have different alias and UPN formats. The only reliable source is `ListChatMembers.email` or vault-cached `email` frontmatter. |
+| Assuming alias == UPN | `jdoe` != `jane.doe@microsoft.com`. Many users have different alias and UPN formats. The only reliable source is `ListChatMembers.email` or vault-cached `email` frontmatter. |
 
 ## Chaining
 

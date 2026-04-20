@@ -31,19 +31,36 @@ Before you begin, make sure you have:
 > [!IMPORTANT]
 > **You do not need to install `git` or `gh` first anymore.** Since this repo is public, you can run the installer directly and let it pull the repo archive for you.
 
-**macOS / Linux:**
+> [!CAUTION]
+> **Run the installer from a safe, empty-ish directory** (like your home folder or Desktop). The script creates a new `L.C.G` folder wherever it runs. Do **not** run it inside system directories, shared drives, or folders containing unrelated work — it will write files into that location.
+
+#### macOS / Linux
+
+1. Open **Terminal** (search for "Terminal" in Spotlight on macOS, or find it in your Applications → Utilities folder).
+2. You should see a command prompt — something like `yourname@mac ~ %` or `user@linux:~$`. The `~` means you're in your home folder, which is a safe place to run the installer.
+3. **Copy and paste** the entire line below into the terminal, then press **Enter**:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/install.sh | bash
 ```
 
-**Windows PowerShell:**
+> **What does this command do?** `curl` downloads the install script from GitHub, and `| bash` runs it immediately. It will create a folder called `~/L.C.G` (inside your home directory) and set everything up there.
+
+#### Windows
+
+1. Open **PowerShell** — press the Windows key, type `PowerShell`, and click **Windows PowerShell** (not "Command Prompt" — they are different).
+2. You should see a prompt like `PS C:\Users\YourName>`. This is your home folder — a safe place to run the installer.
+3. **Copy and paste** the entire line below into the PowerShell window, then press **Enter**:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force; irm https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/install.ps1 | iex
 ```
 
-This downloads the latest public repo snapshot into `~/L.C.G` and hands off to the existing bootstrap flow.
+> **What does this command do?** `Set-ExecutionPolicy -Scope Process Bypass -Force` temporarily allows scripts to run in this session only (it resets when you close the window). `irm` downloads the install script, and `| iex` runs it. It will create a folder called `L.C.G` in your home directory.
+
+#### What happens next
+
+The installer downloads the latest repo snapshot into `~/L.C.G` and hands off to the bootstrap flow automatically. You'll see progress messages in the terminal — just follow any prompts that appear.
 
 > [!NOTE]
 > The installer is just a thin wrapper. It downloads the repo and then runs `scripts/bootstrap.sh` or `scripts/bootstrap.ps1` locally.
