@@ -55,13 +55,13 @@ function has(cmd) {
 }
 
 function version(cmd, flag = "--version") {
-  const r = spawnSync(cmd, [flag], { encoding: "utf-8" });
+  const r = spawnSync(cmd, [flag], { encoding: "utf-8", shell: isWin });
   if (r.status !== 0) return null;
   return (r.stdout || r.stderr).trim().split("\n")[0];
 }
 
 function run(cmd, cmdArgs, opts = {}) {
-  const r = spawnSync(cmd, cmdArgs, { stdio: "inherit", cwd: ROOT, ...opts });
+  const r = spawnSync(cmd, cmdArgs, { stdio: "inherit", cwd: ROOT, shell: isWin, ...opts });
   return r.status ?? 1;
 }
 

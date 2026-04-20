@@ -40,15 +40,21 @@ Before you begin, make sure you have:
 brew install git gh
 ```
 
-**Windows — paste this single line into the default Windows PowerShell terminal:**
+**Windows:**
 
-```powershell
-winget install --id Microsoft.PowerShell --source winget; winget install Git.Git GitHub.cli; Start-Process pwsh -ArgumentList @('-NoExit', '-Command', '$env:PATH+=\";C:\Program Files\Git\cmd;C:\Program Files\GitHub CLI\"; Write-Host \"PowerShell 7 ready - continue with Step 1\" -ForegroundColor Green')
-```
+1. Open **Windows PowerShell** from the Start menu (this is PowerShell 5 by default):
 
-Paste the command above into the default **Windows PowerShell 5** console. It installs all required dependencies — including PowerShell 7, Git, and GitHub CLI — and, once installation completes, automatically launches a new **PowerShell 7** window with the tools already on PATH (as shown below). Continue from that new window.
+   ![Launching the default Windows PowerShell](docs/start_powershell.png)
 
-![Windows PowerShell 5 bootstrap launching PowerShell 7](image/README/powershell-bootstrap.png)
+2. Paste the following single line into that terminal and press Enter:
+
+   ```powershell
+   winget install --id Microsoft.PowerShell --source winget; winget install Git.Git GitHub.cli; Start-Process pwsh -ArgumentList @('-NoExit', '-Command', '$env:PATH+=\";C:\Program Files\Git\cmd;C:\Program Files\GitHub CLI\"; Write-Host \"PowerShell 7 ready - continue with Step 1\" -ForegroundColor Green')
+   ```
+
+   This command installs all required dependencies — including PowerShell 7, Git, and GitHub CLI — and, once installation completes, automatically launches a new **PowerShell 7** window with the tools already on PATH (as shown below). Continue from that new window.
+
+   ![Windows PowerShell 5 bootstrap launching PowerShell 7](docs/PS7installed.png)
 
 > [!NOTE]
 > If you install Git or `gh` while VS Code is already open, **close and reopen VS Code entirely**. VS Code terminals inherit the system PATH from launch — newly installed tools won't be visible until you restart.
