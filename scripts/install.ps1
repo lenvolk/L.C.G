@@ -2,6 +2,7 @@
 param(
   [string]$Dir = (Join-Path (Get-Location).Path 'L.C.G'),
   [string]$Ref = 'main',
+  [string]$RepoOwner = 'lenvolk',
   [switch]$Force,
   [Parameter(ValueFromRemainingArguments = $true)]
   [string[]]$BootstrapArgs
@@ -9,7 +10,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$repoOwner = 'JinLee794'
+$repoOwner = if (-not [string]::IsNullOrWhiteSpace($env:LCG_INSTALL_OWNER)) { $env:LCG_INSTALL_OWNER } else { $RepoOwner }
 $repoName = 'L.C.G'
 $archiveUrl = "https://codeload.github.com/$repoOwner/$repoName/zip/refs/heads/$Ref"
 
