@@ -38,7 +38,7 @@ Before you begin, make sure you have:
 3. Paste this and press **Enter**:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/lenvolk/L.C.G/main/scripts/install.sh | bash
 ```
 
 #### Windows
