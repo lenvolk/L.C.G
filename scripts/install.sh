@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-REPO_OWNER="lenvolk"
+REPO_OWNER="JinLee794"
 REPO_NAME="L.C.G"
 REPO_REF="main"
 INSTALL_DIR="${PWD}/${REPO_NAME}"
@@ -17,8 +17,8 @@ Downloads the public L.C.G repository archive, extracts it into the current
 directory, and runs the repo bootstrap script.
 
 Examples:
-  curl -fsSL https://raw.githubusercontent.com/lenvolk/L.C.G/main/scripts/install.sh | bash
-  curl -fsSL https://raw.githubusercontent.com/lenvolk/L.C.G/main/scripts/install.sh | bash -s -- --dir "$HOME/src/L.C.G"
+  curl -fsSL https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/install.sh | bash -s -- --dir "$HOME/src/L.C.G"
 EOF
 }
 

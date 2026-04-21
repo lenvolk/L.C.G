@@ -266,6 +266,90 @@ function installAzureCli() {
   return false;
 }
 
+function hasVsCode() {
+  // The `code` CLI shim is present on PATH after a normal VS Code install
+  // (Windows: User installer adds it; macOS: "Shell Command: Install 'code' command in PATH";
+  // Linux: apt/rpm/snap packages all provide it).
+  if (has("code")) return true;
+
+  if (isWin) {
+    // Fall back to canonical install locations — `where` can miss the shim
+    // immediately after install until the shell re-reads PATH.
+    const codeBin = findKnownWindowsBinary([
+      "Microsoft VS Code\\bin\\code.cmd",
+      "Programs\\Microsoft VS Code\\bin\\code.cmd",
+    ]);
+    if (codeBin) {
+      const dir = dirname(codeBin);
+      const parts = (process.env.PATH || "").split(";").map((x) => x.trim().toLowerCase());
+      if (!parts.includes(dir.toLowerCase())) {
+        process.env.PATH = process.env.PATH ? `${process.env.PATH};${dir}` : dir;
+      }
+      return has("code");
+    }
+  }
+  return false;
+}
+
+function installVsCode() {
+  if (hasVsCode()) return true;
+
+  info("Visual Studio Code missing - installing...");
+
+  if (isWin) {
+    const installed = installWithWingetOrChoco("Microsoft.VisualStudioCode", "vscode");
+    if (!installed) return false;
+    if (hasVsCode()) return true;
+    // One more PATH refresh in case the shim landed after winget returned.
+    refreshWindowsPath();
+    return hasVsCode();
+  }
+
+  if (platform() === "darwin") {
+    if (has("brew")) {
+      const rc = run("brew", ["install", "--cask", "visual-studio-code"]);
+      return rc === 0 && hasVsCode();
+    }
+    warn("Homebrew not found — install VS Code manually: https://code.visualstudio.com/download");
+    return false;
+  }
+
+  // Linux: prefer snap (works across most distros without extra repo setup).
+  if (has("snap")) {
+    const rc = run("sudo", ["snap", "install", "--classic", "code"]);
+    return rc === 0 && hasVsCode();
+  }
+  if (has("apt-get")) {
+    info("Installing VS Code via apt (Microsoft repo)...");
+    const script = [
+      "set -e",
+      "sudo apt-get install -y wget gpg apt-transport-https",
+      "wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /tmp/packages.microsoft.gpg",
+      "sudo install -D -o root -g root -m 644 /tmp/packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg",
+      'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null',
+      "rm -f /tmp/packages.microsoft.gpg",
+      "sudo apt-get update",
+      "sudo apt-get install -y code",
+    ].join(" && ");
+    const rc = run("bash", ["-lc", script]);
+    return rc === 0 && hasVsCode();
+  }
+  if (has("dnf")) {
+    const script = [
+      "set -e",
+      "sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc",
+      'echo -e "[code]\\nname=Visual Studio Code\\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\\nenabled=1\\ngpgcheck=1\\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null',
+      "sudo dnf check-update -y || true",
+      "sudo dnf install -y code",
+    ].join(" && ");
+    const rc = run("bash", ["-lc", script]);
+    return rc === 0 && hasVsCode();
+  }
+
+  warn("No supported installer found for VS Code — install manually: https://code.visualstudio.com/download");
+  return false;
+}
+
 function installCopilotCli() {
   if (hasRunnableCopilot()) return true;
 
@@ -376,6 +460,19 @@ if (hasCopilot) {
   }
 } else {
   warn("GitHub Copilot CLI not found — optional. Install later with `npm install -g @github/copilot`.");
+}
+
+// Visual Studio Code — recommended host for Copilot Chat / agent surfaces.
+// Optional (never fatal), but auto-installed when a package manager is available.
+let hasCode = hasVsCode();
+if (!hasCode && !CHECK_ONLY) {
+  hasCode = installVsCode();
+}
+if (hasCode) {
+  const codeVer = version("code", "--version")?.split("\n")[0] || "VS Code";
+  ok(`Visual Studio Code ${codeVer}`);
+} else {
+  warn("Visual Studio Code not found — optional. Install later from https://code.visualstudio.com/download.");
 }
 
 // pwsh (optional, only needed for setup-outlook-rules)

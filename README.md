@@ -21,14 +21,17 @@
 Before you begin, make sure you have:
 
 - [ ] **Microsoft corporate VPN** connected
-- [ ] **Microsoft corp account** (e.g., `your-alias@microsoft.com`)
+- [ ] **Microsoft corp account** (e.g., `your-alias@microsoft.com`) for Azure CLI sign-in
+- [ ] **Personal GitHub account** (NOT your `_microsoft` EMU account) for GitHub Packages auth
 - [ ] **GitHub Copilot License** — [Get one here (Microsoft Internal)](https://aka.ms/copilot)
 
 ---
 
 ### Step 0: Run The Installer
 
-The installer prompts you for an install location, downloads the repo, and runs the bootstrap for you. Defaults and behavior:
+The one-liner below downloads the repo, verifies prerequisites, installs missing tools (Node.js, Azure CLI, GitHub CLI, VS Code, Obsidian, Copilot CLI), and walks you through Azure + GitHub sign-in. The whole flow takes about 5 minutes.
+
+Installer behavior at a glance:
 
 - **Default install directory:** `~/L.C.G` (your home folder). Press Enter at the prompt to accept, or type any path.
 - **Cloud-synced paths are blocked:** OneDrive, Dropbox, Google Drive, and iCloud locations are rejected so local secrets never sync to the cloud.
@@ -41,17 +44,74 @@ The installer prompts you for an install location, downloads the repo, and runs 
 2. Paste this and press **Enter**:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lenvolk/L.C.G/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/install.sh | bash
 ```
 
 #### Windows
 
-1. Open **PowerShell** (Start → type "PowerShell" → click **Windows PowerShell**, not Command Prompt).
-2. Paste this and press **Enter**:
+1. Open **Windows PowerShell** — Start → type "PowerShell" → click **Windows PowerShell** (not Command Prompt, not PowerShell ISE).
 
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass -Force; irm "https://raw.githubusercontent.com/lenvolk/L.C.G/main/scripts/install.ps1?nocache=$(Get-Date -UFormat %s)" | iex
-```
+   ![Open Windows PowerShell from Start](image/README/install-01-powershell.jpg)
+
+2. Paste this one-liner and press **Enter**:
+
+   ```powershell
+   Set-ExecutionPolicy -Scope Process Bypass -Force; irm "https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/install.ps1?nocache=$(Get-Date -UFormat %s)" | iex
+   ```
+
+   ![Paste the install command in PowerShell](image/README/install-02-paste-command.jpg)
+
+---
+
+### What you'll be asked during the install
+
+The installer is interactive — it will stop and ask you a few things. Here's exactly what to do at each prompt.
+
+#### 1. Install directory
+
+Accept the default (`C:\Users\<you>\L.C.G` on Windows, `~/L.C.G` on macOS/Linux) by pressing **Enter**, or type a different path. Anything inside OneDrive, Dropbox, Google Drive, or iCloud is rejected by design.
+
+![Install directory prompt — press Enter for default](image/README/install-03-install-dir.jpg)
+
+#### 2. Risk acknowledgement
+
+Before any MCP servers are configured, the installer shows a security notice. Read it, then type **`yes`** and press **Enter** to continue. Typing anything else cancels the install.
+
+![Risk acknowledgement — type yes](image/README/install-04-risk-ack.jpg)
+
+#### 3. Azure sign-in (`az login`)
+
+When prompted **`Run 'az login' now? [Y/n]:`**, press **Enter** (or type `Y`). A browser window pops up — **pick your Microsoft work account** (e.g. `alias@microsoft.com`) and click **Continue**.
+
+![az login — choose your Microsoft work account](image/README/install-05-az-login.jpg)
+
+If your tenant shows a subscription picker in the terminal, press **Enter** to accept the default.
+
+#### 4. GitHub Packages auth — **use your personal GitHub account**
+
+This is the single most important step. Private MCP packages (`@microsoft/msx-mcp-server`, `@jinlee794/obsidian-intelligence-layer`) are hosted on GitHub Packages, which requires a GitHub sign-in with `read:packages`.
+
+> [!IMPORTANT]
+> Sign in with your **personal GitHub account** (e.g. `JohnDoe`). **Do NOT** use your Enterprise Managed User account ending in `_microsoft`.
+
+- At the **preferred protocol** prompt, select **HTTPS** (default).
+- At **Authenticate Git with your GitHub credentials?**, press **Enter** for `Yes`.
+
+![GitHub Packages auth — personal account required](image/README/install-06-gh-personal-warning.jpg)
+
+The installer prints a one-time code (e.g. `F7A5-ADE0`) and then opens `https://github.com/login/device` in your browser. Copy the code, switch to the browser, and paste it.
+
+![Copy the one-time device code](image/README/install-07-gh-device-code.jpg)
+
+Sign in on github.com with your **personal** account — if your browser auto-fills the `_microsoft` EMU account, click **Use a different account** first.
+
+![Sign in with personal GitHub account](image/README/install-08-gh-signin.jpg)
+
+Finally, click **Authorize github** to grant the device the `read:packages` scope.
+
+![Authorize the device](image/README/install-09-gh-authorize.jpg)
+
+Return to the terminal. The installer scaffolds your local vault, links the global `mcaps` command, and prints `✔ Bootstrap complete.`
 
 ---
 
