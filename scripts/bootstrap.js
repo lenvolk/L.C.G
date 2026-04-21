@@ -105,14 +105,17 @@ function hasVsCode() {
 
 // Attempt to auto-install an optional CLI via the local package manager.
 // Returns true if the tool is available after the attempt, false otherwise.
-function tryInstall(toolName, { winget, choco, brew, apt, postInstallPath } = {}) {
+// Set `showUacWarning: false` for tools installed silently by their MSI (e.g. Azure CLI).
+function tryInstall(toolName, { winget, choco, brew, apt, postInstallPath, showUacWarning = true } = {}) {
   const platformName = platform();
 
   if (platformName === "win32") {
     if (winget && has("winget")) {
       info(`Installing ${toolName} via winget…`);
-      console.log(`  ${C.bold}${C.yellow}⚠  Windows may show a UAC prompt — click "Yes" to allow ${toolName} to install.${C.reset}`);
-      console.log(`  ${C.yellow}   (If no prompt appears, it's already elevated or silently approved.)${C.reset}`);
+      if (showUacWarning) {
+        console.log(`  ${C.bold}${C.yellow}⚠  Windows may show a UAC prompt — click "Yes" to allow ${toolName} to install.${C.reset}`);
+        console.log(`  ${C.yellow}   (If no prompt appears, it's already elevated or silently approved.)${C.reset}`);
+      }
       const rc = run("winget", ["install", "--id", winget, "--silent", "--accept-package-agreements", "--accept-source-agreements"]);
       if (rc === 0 || rc === -1978335189 /* already installed */) {
         if (postInstallPath && existsSync(postInstallPath)) {
@@ -123,7 +126,9 @@ function tryInstall(toolName, { winget, choco, brew, apt, postInstallPath } = {}
     }
     if (choco && has("choco")) {
       info(`Installing ${toolName} via Chocolatey…`);
-      console.log(`  ${C.bold}${C.yellow}⚠  Windows may show a UAC prompt — click "Yes" to allow ${toolName} to install.${C.reset}`);
+      if (showUacWarning) {
+        console.log(`  ${C.bold}${C.yellow}⚠  Windows may show a UAC prompt — click "Yes" to allow ${toolName} to install.${C.reset}`);
+      }
       const rc = run("choco", ["install", choco, "-y"]);
       if (rc === 0) return true;
     }
@@ -133,7 +138,8 @@ function tryInstall(toolName, { winget, choco, brew, apt, postInstallPath } = {}
   if (platformName === "darwin") {
     if (brew && has("brew")) {
       info(`Installing ${toolName} via Homebrew…`);
-      const rc = run("brew", ["install", brew]);
+      const brewArgs = Array.isArray(brew) ? brew : brew.split(/\s+/);
+      const rc = run("brew", ["install", ...brewArgs]);
       if (rc === 0) return true;
     }
     return false;
@@ -221,6 +227,7 @@ if (has("az")) {
     choco: "azure-cli",
     brew: "azure-cli",
     postInstallPath: "C:\\Program Files\\Microsoft SDKs\\Azure\\CLI2\\wbin",
+    showUacWarning: false,
   });
   if (isWin) {
     const machinePath = tryRun("powershell -NoProfile -Command \"[Environment]::GetEnvironmentVariable('Path','Machine')\"") || "";
@@ -266,6 +273,19 @@ if (hasVsCode()) {
 
 if (hasObsidian()) {
   ok("Obsidian detected");
+} else if (!CHECK_ONLY) {
+  warn("Obsidian not detected — attempting auto-install…");
+  tryInstall("Obsidian", {
+    winget: "Obsidian.Obsidian",
+    choco: "obsidian",
+    brew: "--cask obsidian",
+  });
+  if (hasObsidian()) {
+    ok("Obsidian installed");
+  } else {
+    warn("Obsidian install was not confirmed in this session. Vault workflows still work, but review/edit is easier with Obsidian.");
+    info("Install: https://obsidian.md/download");
+  }
 } else {
   warn("Obsidian not detected. Vault workflows can still initialize, but review/edit is easier with Obsidian installed.");
   info("Install: https://obsidian.md/download");

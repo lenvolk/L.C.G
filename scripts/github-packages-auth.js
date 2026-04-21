@@ -74,6 +74,8 @@ async function tryInstallGhCli() {
     process.stderr.write("[auth:packages] Homebrew install failed.\n");
   } else if (isWin && hasCommand("winget")) {
     process.stdout.write("[auth:packages] Detected Windows with winget. Installing GitHub CLI…\n");
+    process.stdout.write("  \x1b[1m\x1b[33m⚠  Windows may show a UAC prompt — click \"Yes\" to allow GitHub CLI to install.\x1b[0m\n");
+    process.stdout.write("  \x1b[33m   (If no prompt appears, it's already elevated or silently approved.)\x1b[0m\n");
     const result = spawnSync("winget", ["install", "GitHub.cli", "--silent", "--accept-package-agreements", "--accept-source-agreements"], { cwd: ROOT, stdio: "inherit" });
     if (!result.error && result.status === 0) {
       // Add GitHub CLI to PATH for the current process

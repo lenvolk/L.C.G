@@ -144,8 +144,13 @@ if (Test-VSCode) {
 if (Test-Obsidian) {
   Say-Ok "Obsidian detected"
 } else {
-  Say-Warn "Obsidian not detected. Vault setup can still run, but authoring is easier with Obsidian installed."
-  Say-Info "Download: https://obsidian.md/download"
+  if ($Check) {
+    Say-Warn "Obsidian not detected. Vault setup can still run, but authoring is easier with Obsidian installed."
+    Say-Info "Download: https://obsidian.md/download"
+  } else {
+    Say-Warn "Obsidian not detected — bootstrap.js will attempt auto-install."
+    Say-Info "Download: https://obsidian.md/download"
+  }
 }
 
 # -- Hand off to bootstrap.js --------------------------------------

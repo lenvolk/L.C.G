@@ -87,6 +87,8 @@ $defaultInstallDir = Join-Path $defaultInstallRoot 'L.C.G'
 
 if (-not $dirWasExplicit) {
   Write-Info 'Where would you like to install L.C.G?'
+  Write-Info "  Press Enter to install at '$defaultInstallDir' (parent '$defaultInstallRoot' will be created if missing)."
+  Write-Info "  Or type any full path (e.g. 'D:\Projects\L.C.G') to install there."
 
   if (-not (Test-Path $defaultInstallRoot)) {
     New-Item -ItemType Directory -Path $defaultInstallRoot -Force | Out-Null
@@ -105,6 +107,7 @@ if (-not $dirWasExplicit) {
     Write-Info "Using default install directory '$Dir'."
   } else {
     $Dir = $requestedDir.Trim()
+    Write-Info "Using install directory '$Dir'."
   }
 }
 
