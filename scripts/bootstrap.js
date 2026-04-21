@@ -148,9 +148,20 @@ function installWithWingetOrChoco(wingetId, chocoPkg) {
       "--accept-package-agreements",
       "--accept-source-agreements",
     ]);
-    if (rc === 0) {
-      refreshWindowsPath();
+    // winget returns non-zero for several benign conditions:
+    //   0x8a15002b (already installed)
+    //   1622        (installer succeeded but log file couldn't be written)
+    //   0x8a150011  (another install in progress)
+    // Refresh PATH and let the caller re-probe for the tool rather than
+    // trusting winget's exit code alone.
+    refreshWindowsPath();
+    if (rc === 0) return true;
+    if (rc === 1622) {
+      warn(`winget reported installer log error 1622 for ${wingetId} — verifying tool presence directly.`);
       return true;
+    }
+    if (rc !== 0) {
+      warn(`winget exited with code ${rc} for ${wingetId}; probing for tool and falling back if needed.`);
     }
   }
 
@@ -337,7 +348,7 @@ if (has("git")) {
   warn("git not found — required for repo operations");
 }
 
-// Azure CLI
+// Azure CLI (optional — required only by tasks that call `az`).
 let hasAz = has("az");
 if (!hasAz && !CHECK_ONLY) {
   hasAz = installAzureCli();
@@ -348,16 +359,11 @@ if (hasAz) {
   const azVer = azRaw?.match(/"azure-cli":\s*"([^"]+)"/)?.[1] || azRaw?.replace(/[{}\s]/g, "") || "Azure CLI";
   ok(`Azure CLI ${azVer}`);
 } else {
-  if (CHECK_ONLY) {
-    warn("Azure CLI (`az`) not found");
-  } else {
-    fail("Azure CLI installation failed");
-    allGood = false;
-  }
+  warn("Azure CLI (`az`) not found — optional. Install later from https://aka.ms/installazurecliwindows if you need CRM/Azure tasks.");
 }
 
-// GitHub Copilot CLI — prefer the real `copilot` binary. Only treat `gh copilot`
-// as acceptable when the official CLI cannot be installed at all.
+// GitHub Copilot CLI — optional; prefer the real `copilot` binary. Fall back
+// to `gh copilot` if available. Never fatal: users can install later.
 let hasCopilot = hasRunnableCopilot();
 if (!hasCopilot && !CHECK_ONLY) {
   hasCopilot = installCopilotCli();
@@ -369,12 +375,7 @@ if (hasCopilot) {
     ok("GitHub Copilot CLI available (gh copilot fallback)");
   }
 } else {
-  if (CHECK_ONLY) {
-    warn("GitHub Copilot CLI not found");
-  } else {
-    fail("GitHub Copilot CLI installation failed");
-    allGood = false;
-  }
+  warn("GitHub Copilot CLI not found — optional. Install later with `npm install -g @github/copilot`.");
 }
 
 // pwsh (optional, only needed for setup-outlook-rules)
