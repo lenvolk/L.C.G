@@ -362,6 +362,52 @@ function printAliasFallback() {
   }
 }
 
+function quotePsSingle(value) {
+  return String(value).replace(/'/g, "''");
+}
+
+function ensureUserPathContains(pathEntry) {
+  if (!isWindows || !pathEntry) return false;
+
+  const escaped = quotePsSingle(pathEntry);
+  const cmd = [
+    "$entry='" + escaped + "'",
+    "$userPath=[Environment]::GetEnvironmentVariable('Path','User')",
+    "if ([string]::IsNullOrWhiteSpace($userPath)) { $userPath='' }",
+    "$parts=@()",
+    "if ($userPath) { $parts=$userPath -split ';' }",
+    "$exists=$parts | Where-Object { $_.Trim().ToLowerInvariant() -eq $entry.ToLowerInvariant() }",
+    "if (-not $exists) {",
+    "  $next=($userPath.TrimEnd(';') + ';' + $entry).Trim(';')",
+    "  [Environment]::SetEnvironmentVariable('Path',$next,'User')",
+    "}",
+  ].join("; ");
+
+  return runBestEffort(`powershell -NoProfile -ExecutionPolicy Bypass -Command \"${cmd}\"`, ROOT);
+}
+
+function addPathToCurrentProcess(pathEntry) {
+  if (!pathEntry) return;
+  const current = process.env.PATH || "";
+  const hasEntry = current
+    .split(";")
+    .map((p) => p.trim().toLowerCase())
+    .includes(pathEntry.trim().toLowerCase());
+  if (!hasEntry) {
+    process.env.PATH = current ? `${current};${pathEntry}` : pathEntry;
+  }
+}
+
+function hasMcapsShim(npmPrefix) {
+  if (!npmPrefix) return false;
+  const candidates = [
+    join(npmPrefix, "mcaps.cmd"),
+    join(npmPrefix, "mcaps.ps1"),
+    join(npmPrefix, "mcaps"),
+  ];
+  return candidates.some((p) => existsSync(p));
+}
+
 function registerAlias() {
   console.log();
   console.log("  \x1b[1m\x1b[36m╔══════════════════════════════════════════════════════════╗\x1b[0m");
@@ -414,39 +460,32 @@ function registerAlias() {
     return true;
   }
 
-  // On Windows, npm link often succeeds but current PATH does not yet include
-  // npm's global bin directory in this process/session.
+  // On Windows, npm link often succeeds but PATH/state is stale.
   if (isWindows) {
     const npmPrefix = tryRun("npm config get prefix");
     if (npmPrefix) {
-      const sep = process.env.PATH?.includes(";") ? ";" : ":";
-      const currentPath = process.env.PATH || "";
-      const hasPrefixInPath = currentPath
-        .split(sep)
+      const hadPrefixInSession = (process.env.PATH || "")
+        .split(";")
         .map((p) => p.trim().toLowerCase())
         .includes(npmPrefix.trim().toLowerCase());
 
-      if (!hasPrefixInPath) {
-        process.env.PATH = currentPath ? `${currentPath};${npmPrefix}` : npmPrefix;
+      addPathToCurrentProcess(npmPrefix);
+      const persisted = ensureUserPathContains(npmPrefix);
+      if (persisted && !hadPrefixInSession) {
+        info("Persisted npm global bin path to User PATH.");
       }
 
-      const foundAfterPathRefresh = tryRun(whichCmd);
-      if (foundAfterPathRefresh) {
-        ok("'mcaps' is now available globally — PATH was refreshed for this session.");
+      const foundAfterRepair = tryRun(whichCmd);
+      if (foundAfterRepair) {
+        ok("'mcaps' is now available globally — PATH was repaired automatically.");
+        return true;
+      }
 
-        // Best effort: persist PATH update for future terminals.
-        if (!hasPrefixInPath) {
-          try {
-            run(
-              `powershell -NoProfile -Command "if (-not (($env:Path -split ';') -contains '${npmPrefix}')) { [Environment]::SetEnvironmentVariable('PATH', [Environment]::GetEnvironmentVariable('PATH','User') + ';${npmPrefix}', 'User') }"`,
-              ROOT,
-            );
-            info("Persisted npm global bin path to User PATH.");
-          } catch {
-            // Non-fatal; session is already fixed.
-          }
-        }
-
+      // Accept success if the shim exists. In some PowerShell sessions,
+      // command discovery lags until a new terminal is opened.
+      if (hasMcapsShim(npmPrefix)) {
+        ok("'mcaps' shim was installed and PATH was configured automatically.");
+        info("Open a new terminal to use 'mcaps' globally.");
         return true;
       }
     }
