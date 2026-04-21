@@ -18,6 +18,29 @@ function Write-Info($message) {
   Write-Host $message -ForegroundColor Cyan
 }
 
+$dirWasExplicit = $PSBoundParameters.ContainsKey('Dir')
+$defaultInstallDir = Join-Path $HOME 'L.C.G'
+
+if (-not $dirWasExplicit) {
+  Write-Info "Install directory (press Enter for '$defaultInstallDir'):"
+
+  $requestedDir = $null
+  try {
+    $requestedDir = Read-Host "Install directory"
+  }
+  catch {
+    # In non-interactive shells, fall back to the safe default.
+  }
+
+  if ([string]::IsNullOrWhiteSpace($requestedDir)) {
+    $Dir = $defaultInstallDir
+    Write-Info "Using default install directory '$Dir'."
+  } else {
+    $Dir = $requestedDir.Trim()
+    Write-Info "Using install directory '$Dir'."
+  }
+}
+
 $Dir = [System.IO.Path]::GetFullPath($Dir)
 
 # Block installation into cloud-synced directories (credentials would sync to the cloud).
