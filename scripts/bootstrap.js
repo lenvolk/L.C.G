@@ -65,6 +65,22 @@ function run(cmd, cmdArgs, opts = {}) {
   return r.status ?? 1;
 }
 
+function npmVersion() {
+  if (isWin) {
+    const r = spawnSync("cmd.exe", ["/d", "/s", "/c", "npm --version"], { encoding: "utf-8" });
+    if (r.status !== 0) return null;
+    return (r.stdout || r.stderr).trim().split("\n")[0];
+  }
+  return version("npm");
+}
+
+function npmInstall() {
+  if (isWin) {
+    return run("cmd.exe", ["/d", "/s", "/c", "npm install"]);
+  }
+  return run("npm", ["install"]);
+}
+
 // ── Step 1: prereq checks ───────────────────────────────────────────
 step("Checking prerequisites");
 
@@ -82,7 +98,7 @@ if (nodeMajor >= 18) {
 
 // npm
 if (has("npm")) {
-  ok(`npm ${version("npm") || "(version unknown)"}`);
+  ok(`npm ${npmVersion() || "(version unknown)"}`);
 } else {
   fail("npm not found");
   allGood = false;
@@ -140,7 +156,7 @@ if (!SKIP_INSTALL) {
     fail("package.json not found — are you running this from inside the repo?");
     process.exit(1);
   }
-  const rc = run("npm", ["install"]);
+  const rc = npmInstall();
   if (rc !== 0) {
     fail("npm install failed");
     process.exit(rc);
