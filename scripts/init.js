@@ -566,6 +566,10 @@ function registerAlias() {
   if (isWindows) {
     const npmPrefix = tryRun("npm config get prefix");
     if (npmPrefix) {
+      // Ensure shim launchers exist even if npm link succeeds but does not
+      // materialize command shims in this environment.
+      createMcapsShims(npmPrefix);
+
       const hadPrefixInSession = (process.env.PATH || "")
         .split(";")
         .map((p) => p.trim().toLowerCase())
