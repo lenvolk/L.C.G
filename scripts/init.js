@@ -761,8 +761,23 @@ if (checkMode) {
       console.log();
     }
 
-    // Check if already signed in to provide the right next step
-    const account = tryRun("az account show --query user.name -o tsv");
+    // Check if already signed in; if not, offer interactive az login now.
+    let account = tryRun("az account show --query user.name -o tsv");
+    if (!account && process.stdin.isTTY && commandExists("az")) {
+      console.log("\n  Azure sign-in is required to use CRM/M365-connected workflows.");
+      console.log("  Use your Microsoft account, for example: alias@microsoft.com");
+      console.log("  During subscription selection, you can press Enter to accept any default option.\n");
+
+      const runAzLogin = await ask("  Run 'az login' now? [Y/n]: ");
+      if (!runAzLogin || runAzLogin.toLowerCase() === "y" || runAzLogin.toLowerCase() === "yes") {
+        const loginOk = runBestEffort("az login");
+        if (!loginOk) {
+          warn("Azure login was not completed. You can run 'az login' later.");
+        }
+        account = tryRun("az account show --query user.name -o tsv");
+      }
+    }
+
     if (account) {
       console.log(`
   You're signed in as ${account}. Everything is ready!
@@ -778,6 +793,8 @@ if (checkMode) {
   Next steps:
     1. Connect to Microsoft VPN
     2. Sign in to Azure:        az login
+       Use your Microsoft account (example: alias@microsoft.com)
+       During subscription selection, press Enter to choose any default option
     3. Open this repo in VS Code:  code .
     4. MCP servers auto-start via .vscode/mcp.json
     5. Open Copilot chat (Cmd+Shift+I) and try: "Who am I in MSX?"
