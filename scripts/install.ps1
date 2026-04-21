@@ -165,34 +165,34 @@ try {
   # Ensure execution policy allows running the bootstrap script in this process
   # (avoids hardcoding 'powershell' vs 'pwsh' and spawning a mismatched engine).
   Set-ExecutionPolicy -Scope Process Bypass -Force -ErrorAction SilentlyContinue
-  $bootstrapResult = $null
+
+  # Stream bootstrap output directly to the console instead of capturing it.
+  # Capturing into a variable:
+  #   - hides npm install progress and errors
+  #   - redirects stdin so interactive prompts (consent, GitHub auth) silently skip
+  #   - makes failed installs look successful because the final 'return 0' is captured
+  # Streaming keeps the user in the loop and lets interactive auth flows work.
   if ($BootstrapArgs) {
-    $bootstrapResult = & .\scripts\bootstrap.ps1 @BootstrapArgs
+    & .\scripts\bootstrap.ps1 @BootstrapArgs
   } else {
-    $bootstrapResult = & .\scripts\bootstrap.ps1
+    & .\scripts\bootstrap.ps1
   }
 
-  # bootstrap.ps1 can emit regular output + a trailing numeric return value.
-  # Extract a numeric code without crashing on mixed output arrays.
-  $bootstrapCode = $null
-  if ($bootstrapResult -is [array]) {
-    $candidateCode = $bootstrapResult | Select-Object -Last 1
-  } else {
-    $candidateCode = $bootstrapResult
-  }
-
-  if ($candidateCode -is [int]) {
-    $bootstrapCode = $candidateCode
-  } elseif ($null -ne $candidateCode -and ([string]$candidateCode) -match '^-?\d+$') {
-    $bootstrapCode = [int]$candidateCode
-  } elseif ($LASTEXITCODE -is [int]) {
-    $bootstrapCode = $LASTEXITCODE
-  } else {
-    $bootstrapCode = 0
-  }
+  $bootstrapCode = if ($LASTEXITCODE -is [int]) { $LASTEXITCODE } else { 0 }
 
   if ($bootstrapCode -ne 0) {
     throw "Bootstrap failed with exit code $bootstrapCode. Re-run .\\scripts\\bootstrap.ps1 in '$Dir' to see details."
+  }
+
+  # Sanity check: verify the bootstrap actually produced a usable install.
+  $nodeModulesPath = Join-Path $Dir 'node_modules'
+  if (-not (Test-Path $nodeModulesPath)) {
+    Write-Host ''
+    Write-Host '[ERROR] Bootstrap reported success but node_modules is missing.' -ForegroundColor Red
+    Write-Host "         npm install did not complete in '$Dir'." -ForegroundColor Red
+    Write-Host '         Re-run manually to see the error:' -ForegroundColor Yellow
+    Write-Host "           Set-Location '$Dir'; npm install" -ForegroundColor Cyan
+    throw 'Bootstrap did not install npm dependencies.'
   }
 
   $hasVSCode = [bool](Get-Command code -ErrorAction SilentlyContinue)

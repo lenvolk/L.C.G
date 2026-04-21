@@ -195,7 +195,7 @@ Answers are saved to `_lcg/role.md` and related config files in your vault. Re-r
 
 Still in Copilot Chat, try any of these:
 
-- `/morning-triage` — prioritized daily brief
+- `/triage-morning` — prioritized daily brief
 - `/meeting-brief` — one-page prep for your next meeting
 - `Review my pipeline` — plain-English request works too
 
@@ -245,19 +245,19 @@ Just type a command in Copilot Chat. No menus, no screens, no training required.
 
 | Say this…                | …and get this                                                  |
 | ------------------------ | -------------------------------------------------------------- |
-| `/morning-triage`      | Prioritized daily brief: what's urgent, what can wait, who's waiting on you |
+| `/triage-morning`      | Prioritized daily brief: what's urgent, what can wait, who's waiting on you |
 | `/meeting-brief`       | One-page prep for your next meeting — context, attendees, open items, risks |
 | `/meeting-followup`    | Action items and next steps written for you after a meeting ends |
-| `/update-request`      | Polished follow-up emails to customers who owe you an answer   |
+| `/deal-update-request` | Polished follow-up emails to customers who owe you an answer   |
 
 ### 📆 Every Week
 
-| Say this…                | …and get this                                       |
-| ------------------------ | --------------------------------------------------- |
-| `/weekly-rob`          | Your rhythm-of-business summary, ready to send      |
-| `/winning-wednesdays`  | Win-Room highlights condensed to what matters       |
-| `/win-wire-digest`     | Big-deal recaps compiled for your team              |
-| `/stu-highlights`      | Channel highlights you'd otherwise miss             |
+| Say this…                      | …and get this                                       |
+| ------------------------------ | --------------------------------------------------- |
+| `/triage-weekly-rob`         | Your rhythm-of-business summary, ready to send      |
+| `/triage-winning-wednesdays` | Win-Room highlights condensed to what matters       |
+| `/triage-win-digest`         | Big-deal recaps compiled for your team              |
+| `/triage-stu-highlights`     | Channel highlights you'd otherwise miss             |
 
 ### 🎯 On Demand
 

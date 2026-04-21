@@ -54,6 +54,16 @@ function has(cmd) {
   return r.status === 0;
 }
 
+function tryRun(cmd) {
+  try {
+    const r = spawnSync(cmd, { encoding: "utf-8", shell: true, stdio: ["pipe", "pipe", "pipe"] });
+    if (r.status !== 0) return null;
+    return (r.stdout || "").trim();
+  } catch {
+    return null;
+  }
+}
+
 function resolveExec(cmd) {
   return cmd;
 }
@@ -91,6 +101,52 @@ function hasVsCode() {
   ];
 
   return candidates.some((candidate) => existsSync(candidate));
+}
+
+// Attempt to auto-install an optional CLI via the local package manager.
+// Returns true if the tool is available after the attempt, false otherwise.
+function tryInstall(toolName, { winget, choco, brew, apt, postInstallPath } = {}) {
+  const platformName = platform();
+
+  if (platformName === "win32") {
+    if (winget && has("winget")) {
+      info(`Installing ${toolName} via winget…`);
+      console.log(`  ${C.bold}${C.yellow}⚠  Windows may show a UAC prompt — click "Yes" to allow ${toolName} to install.${C.reset}`);
+      console.log(`  ${C.yellow}   (If no prompt appears, it's already elevated or silently approved.)${C.reset}`);
+      const rc = run("winget", ["install", "--id", winget, "--silent", "--accept-package-agreements", "--accept-source-agreements"]);
+      if (rc === 0 || rc === -1978335189 /* already installed */) {
+        if (postInstallPath && existsSync(postInstallPath)) {
+          process.env.PATH = `${process.env.PATH};${postInstallPath}`;
+        }
+        return true;
+      }
+    }
+    if (choco && has("choco")) {
+      info(`Installing ${toolName} via Chocolatey…`);
+      console.log(`  ${C.bold}${C.yellow}⚠  Windows may show a UAC prompt — click "Yes" to allow ${toolName} to install.${C.reset}`);
+      const rc = run("choco", ["install", choco, "-y"]);
+      if (rc === 0) return true;
+    }
+    return false;
+  }
+
+  if (platformName === "darwin") {
+    if (brew && has("brew")) {
+      info(`Installing ${toolName} via Homebrew…`);
+      const rc = run("brew", ["install", brew]);
+      if (rc === 0) return true;
+    }
+    return false;
+  }
+
+  // Linux
+  if (apt && has("apt-get")) {
+    info(`Installing ${toolName} via apt…`);
+    console.log(`  ${C.bold}${C.yellow}⚠  sudo may prompt for your password to install ${toolName}.${C.reset}`);
+    const rc = run("sudo", ["apt-get", "install", "-y", apt]);
+    if (rc === 0) return true;
+  }
+  return false;
 }
 
 function hasObsidian() {
@@ -134,24 +190,68 @@ if (has("npm")) {
 // git
 if (has("git")) {
   ok(version("git") || "git");
+} else if (!CHECK_ONLY) {
+  warn("git not found — attempting auto-install…");
+  tryInstall("git", { winget: "Git.Git", choco: "git", brew: "git", apt: "git" });
+  // Refresh PATH so freshly installed git is visible in this process.
+  if (isWin) {
+    const machinePath = tryRun("powershell -NoProfile -Command \"[Environment]::GetEnvironmentVariable('Path','Machine')\"") || "";
+    const userPath = tryRun("powershell -NoProfile -Command \"[Environment]::GetEnvironmentVariable('Path','User')\"") || "";
+    process.env.PATH = `${machinePath};${userPath}`;
+  }
+  if (has("git")) {
+    ok(version("git") || "git installed");
+  } else {
+    warn("git install was not confirmed in this session. Open a new shell to pick it up.");
+    info("Install: https://git-scm.com/downloads");
+  }
 } else {
   warn("git not found — required for repo operations");
 }
 
-// Azure CLI (optional)
+// Azure CLI — required for MSX CRM + WorkIQ runtime auth.
 if (has("az")) {
   const azRaw = version("az", "version");
-  // `az version` outputs JSON; extract the azure-cli value.
   const azVer = azRaw?.match(/"azure-cli":\s*"([^"]+)"/)?.[1] || azRaw?.replace(/[{}\s]/g, "") || "Azure CLI";
   ok(`Azure CLI ${azVer}`);
+} else if (!CHECK_ONLY) {
+  warn("Azure CLI (`az`) not found — attempting auto-install…");
+  tryInstall("Azure CLI", {
+    winget: "Microsoft.AzureCLI",
+    choco: "azure-cli",
+    brew: "azure-cli",
+    postInstallPath: "C:\\Program Files\\Microsoft SDKs\\Azure\\CLI2\\wbin",
+  });
+  if (isWin) {
+    const machinePath = tryRun("powershell -NoProfile -Command \"[Environment]::GetEnvironmentVariable('Path','Machine')\"") || "";
+    const userPath = tryRun("powershell -NoProfile -Command \"[Environment]::GetEnvironmentVariable('Path','User')\"") || "";
+    process.env.PATH = `${machinePath};${userPath}`;
+  }
+  if (has("az")) {
+    ok("Azure CLI installed");
+    info("Run `az login` before using CRM/WorkIQ workflows.");
+  } else {
+    warn("Azure CLI install was not confirmed in this session.");
+    info("Install: https://learn.microsoft.com/cli/azure/install-azure-cli");
+  }
 } else {
   warn("Azure CLI (`az`) not found — required for MSX-CRM + WorkIQ tools at runtime");
   info("Install: https://learn.microsoft.com/cli/azure/install-azure-cli");
 }
 
-// GitHub Copilot CLI (optional at install-time)
+// GitHub Copilot CLI — needed for the `mcaps` command and headless task runners.
 if (has("copilot")) {
   ok("GitHub Copilot CLI on PATH");
+} else if (!CHECK_ONLY) {
+  warn("`copilot` not on PATH — attempting auto-install via npm…");
+  // Copilot CLI is distributed as an npm package; install globally.
+  const rc = run("npm", ["install", "-g", "@github/copilot"]);
+  if (rc === 0 && has("copilot")) {
+    ok("GitHub Copilot CLI installed");
+  } else {
+    warn("Copilot CLI global install was not confirmed. Task runners will fall back to the VS Code bundled binary.");
+    info("Install: https://docs.github.com/en/copilot/github-copilot-in-the-cli");
+  }
 } else {
   warn("`copilot` not on PATH — task runners will fall back to the bundled VS Code binary");
   info("Install: https://docs.github.com/en/copilot/github-copilot-in-the-cli");
@@ -208,6 +308,12 @@ if (!SKIP_INSTALL) {
 // ── Step 3: delegate to init.js ─────────────────────────────────────
 step("Running environment initializer");
 const rc2 = run(process.execPath, [join(ROOT, "scripts", "init.js")]);
+if (rc2 === 2) {
+  // init.js exits with 2 when the user explicitly cancels at the consent prompt.
+  // Don't print "Bootstrap complete" — setup did not finish.
+  console.log(`\n${C.yellow}Setup was cancelled at the consent prompt. Re-run when you're ready.${C.reset}`);
+  process.exit(2);
+}
 if (rc2 !== 0) {
   fail(`init.js exited with code ${rc2}`);
   process.exit(rc2);

@@ -490,10 +490,32 @@ if (checkMode) {
 `);
 
   if (process.stdin.isTTY) {
-    const consent = await ask("  Type 'yes' to accept and continue installation: ");
-    if (consent.toLowerCase() !== "yes") {
+    // Loop until we get an explicit answer. Empty input (stray newline left in
+    // stdin buffer from a subprocess or pipe) used to silently cancel setup —
+    // that was misinterpreted as a rejection. Now we re-prompt on empty input
+    // and only cancel on an explicit 'no' / 'n' / 'quit'.
+    let consent = "";
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const answer = (await ask("  Type 'yes' to accept, or 'no' to cancel: ")).toLowerCase();
+      if (answer === "yes" || answer === "y") {
+        consent = "yes";
+        break;
+      }
+      if (answer === "no" || answer === "n" || answer === "quit" || answer === "q") {
+        consent = "no";
+        break;
+      }
+      if (answer === "") {
+        warn("Empty input — please type 'yes' or 'no'.");
+        continue;
+      }
+      warn(`Unrecognized answer '${answer}'. Please type 'yes' or 'no'.`);
+    }
+
+    if (consent !== "yes") {
       console.log("\n  Setup cancelled. Re-run when you're ready.\n");
-      process.exit(0);
+      // Exit with a distinct code so bootstrap.js doesn't print "Bootstrap complete".
+      process.exit(2);
     }
   } else {
     warn("Non-interactive shell — proceeding with installation.");

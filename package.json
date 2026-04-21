@@ -12,6 +12,7 @@
     "bootstrap:check": "node scripts/bootstrap.js --check",
     "setup": "node scripts/init.js",
     "check": "node scripts/init.js --check",
+    "auth:packages": "node scripts/github-packages-auth.js",
     "vault:init": "node scripts/bootstrap-vault.js",
     "vault:hygiene": "node scripts/run.js vault-hygiene",
     "outlook:rules": "node scripts/setup-outlook-rules.js",
