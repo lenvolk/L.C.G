@@ -191,7 +191,12 @@ try {
     $bootstrapCode = 0
   }
 
-  return [int]$bootstrapCode
+  if ($bootstrapCode -ne 0) {
+    throw "Bootstrap failed with exit code $bootstrapCode. Re-run .\\scripts\\bootstrap.ps1 in '$Dir' to see details."
+  }
+
+  Write-Info 'Bootstrap completed successfully.'
+  return
 }
 finally {
   if (Test-Path $tempRoot) {
