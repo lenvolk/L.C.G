@@ -8,14 +8,43 @@ import { resolveCopilotBin } from "../scripts/lib/copilot.js";
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const args = process.argv.slice(2);
 
+function needsShell(cmd) {
+  if (process.platform !== "win32") return false;
+  // On Node 20+ Windows, spawning .cmd/.bat with shell:false throws EINVAL.
+  // Also use the shell for bare command names (e.g. "gh", "copilot") because
+  // PATHEXT resolution requires it.
+  if (/\.(cmd|bat)$/i.test(cmd)) return true;
+  if (!/[\\/]/.test(cmd) && !/\.exe$/i.test(cmd)) return true;
+  return false;
+}
+
+function quoteWinArg(arg) {
+  if (arg === "") return '""';
+  if (!/[\s"&|<>^%]/.test(arg)) return arg;
+  return `"${String(arg).replace(/"/g, '\\"')}"`;
+}
+
 function run(cmd, cmdArgs, opts = {}) {
   return new Promise((resolveRun) => {
-    const child = spawn(cmd, cmdArgs, {
+    const useShell = opts.shell ?? needsShell(cmd);
+
+    // When running through a Windows shell, spawn() doesn't escape arguments
+    // for us. Do it explicitly so spaces / special chars survive.
+    let spawnCmd = cmd;
+    let spawnArgs = cmdArgs;
+    if (useShell && process.platform === "win32") {
+      const quoted = [cmd, ...cmdArgs].map(quoteWinArg).join(" ");
+      spawnCmd = quoted;
+      spawnArgs = [];
+    }
+
+    const child = spawn(spawnCmd, spawnArgs, {
       cwd: ROOT,
       env: process.env,
       stdio: "inherit",
-      shell: false,
+      windowsHide: true,
       ...opts,
+      shell: useShell,
     });
     child.on("exit", (code) => resolveRun(code ?? 0));
     child.on("error", () => resolveRun(1));
