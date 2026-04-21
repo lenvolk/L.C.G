@@ -54,14 +54,21 @@ function has(cmd) {
   return r.status === 0;
 }
 
+function resolveExec(cmd) {
+  if (isWin && cmd === "npm") {
+    return "npm.cmd";
+  }
+  return cmd;
+}
+
 function version(cmd, flag = "--version") {
-  const r = spawnSync(cmd, [flag], { encoding: "utf-8" });
+  const r = spawnSync(resolveExec(cmd), [flag], { encoding: "utf-8" });
   if (r.status !== 0) return null;
   return (r.stdout || r.stderr).trim().split("\n")[0];
 }
 
 function run(cmd, cmdArgs, opts = {}) {
-  const r = spawnSync(cmd, cmdArgs, { stdio: "inherit", cwd: ROOT, ...opts });
+  const r = spawnSync(resolveExec(cmd), cmdArgs, { stdio: "inherit", cwd: ROOT, ...opts });
   return r.status ?? 1;
 }
 
