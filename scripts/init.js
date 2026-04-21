@@ -207,7 +207,7 @@ function ensureObsidianDesktop({ autoInstall = false } = {}) {
 }
 
 // ── prerequisite validation ─────────────────────────────────────────
-function checkPrereqs({ autoInstallOptional = false } = {}) {
+async function checkPrereqs({ autoInstallOptional = false } = {}) {
   heading("Checking prerequisites");
   let passed = true;
 
@@ -248,11 +248,31 @@ function checkPrereqs({ autoInstallOptional = false } = {}) {
     ok(`Azure CLI ${azVersion}`);
 
     // Check if the user is actually signed in
-    const account = tryRun("az account show --query user.name -o tsv");
+    let account = tryRun("az account show --query user.name -o tsv");
     if (account) {
       ok(`Signed in as ${account}`);
     } else {
       warn("Azure CLI installed but not signed in — run: az login");
+
+      if (autoInstallOptional && process.stdin.isTTY) {
+        console.log("\n  Azure sign-in is required to continue setup.");
+        console.log("  Use your Microsoft account, for example: alias@microsoft.com");
+        console.log("  During subscription selection, you can press Enter to accept any default option.\n");
+
+        const runAzLogin = await ask("  Run 'az login' now? [Y/n]: ");
+        if (!runAzLogin || runAzLogin.toLowerCase() === "y" || runAzLogin.toLowerCase() === "yes") {
+          const loginOk = runBestEffort("az login");
+          if (!loginOk) {
+            warn("Azure login was not completed. You can run 'az login' later.");
+          }
+          account = tryRun("az account show --query user.name -o tsv");
+          if (account) {
+            ok(`Signed in as ${account}`);
+          } else {
+            warn("Azure CLI still not signed in.");
+          }
+        }
+      }
     }
   } else {
     warn("Azure CLI not found — needed for CRM authentication.");
@@ -319,8 +339,8 @@ function initServers() {
 }
 
 // ── check-only mode ─────────────────────────────────────────────────
-function checkOnly() {
-  const prereqsOk = checkPrereqs();
+async function checkOnly() {
+  const prereqsOk = await checkPrereqs();
 
   heading("Checking package-based MCP servers");
   for (const server of PACKAGE_SERVERS) {
@@ -674,10 +694,10 @@ function runVaultSync() {
 const checkMode = process.argv.includes("--check");
 
 if (checkMode) {
-  const ok = checkOnly();
+  const ok = await checkOnly();
   process.exit(ok ? 0 : 1);
 } else {
-  const prereqsOk = checkPrereqs({ autoInstallOptional: true });
+  const prereqsOk = await checkPrereqs({ autoInstallOptional: true });
   if (!prereqsOk) {
     console.log("\nFix prerequisite issues above, then re-run this script.");
     process.exit(1);
