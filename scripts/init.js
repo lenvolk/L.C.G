@@ -148,6 +148,64 @@ function ensureOptionalCli(name, verifyCmd, installers) {
   return false;
 }
 
+function findObsidianDesktop() {
+  if (isWindows) {
+    const candidates = [
+      join(process.env.LOCALAPPDATA || "", "Obsidian", "Obsidian.exe"),
+      "C:\\Program Files\\Obsidian\\Obsidian.exe",
+      "C:\\Program Files (x86)\\Obsidian\\Obsidian.exe",
+    ].filter(Boolean);
+
+    for (const appPath of candidates) {
+      if (existsSync(appPath)) return appPath;
+    }
+    return null;
+  }
+
+  if (process.platform === "darwin") {
+    const appPath = "/Applications/Obsidian.app";
+    return existsSync(appPath) ? appPath : null;
+  }
+
+  return commandExists("obsidian") ? "obsidian" : null;
+}
+
+function ensureObsidianDesktop({ autoInstall = false } = {}) {
+  let obsidianPath = findObsidianDesktop();
+  if (obsidianPath) {
+    ok(`Obsidian Desktop detected (${obsidianPath})`);
+    return true;
+  }
+
+  if (!autoInstall) {
+    warn("Obsidian Desktop not found.");
+    warn("  Install: https://obsidian.md/download");
+    return false;
+  }
+
+  info("Obsidian Desktop not detected. Attempting automatic install...");
+
+  if (isWindows && commandExists("winget")) {
+    info("Installing Obsidian via winget...");
+    runBestEffort("winget install --id Obsidian.Obsidian -e --accept-package-agreements --accept-source-agreements");
+  } else if (process.platform === "darwin" && commandExists("brew")) {
+    info("Installing Obsidian via Homebrew...");
+    runBestEffort("brew install --cask obsidian");
+  } else {
+    warn("Automatic Obsidian install is not available on this platform.");
+  }
+
+  obsidianPath = findObsidianDesktop();
+  if (obsidianPath) {
+    ok(`Obsidian Desktop installed (${obsidianPath})`);
+    return true;
+  }
+
+  warn("Obsidian Desktop install did not complete automatically.");
+  warn("  Install: https://obsidian.md/download");
+  return false;
+}
+
 // ── prerequisite validation ─────────────────────────────────────────
 function checkPrereqs({ autoInstallOptional = false } = {}) {
   heading("Checking prerequisites");
@@ -240,6 +298,8 @@ function checkPrereqs({ autoInstallOptional = false } = {}) {
     console.log("  \x1b[1m\x1b[31m╚══════════════════════════════════════════════════════════╝\x1b[0m");
     console.log();
   }
+
+  ensureObsidianDesktop({ autoInstall: autoInstallOptional });
 
   return passed;
 }
