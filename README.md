@@ -59,8 +59,6 @@ curl -fsSL https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/instal
    Set-ExecutionPolicy -Scope Process Bypass -Force; irm "https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/install.ps1?nocache=$(Get-Date -UFormat %s)" | iex
    ```
 
-   ![Paste the install command in PowerShell](image/README/install-02-paste-command.jpg)
-
 ---
 
 ### What you'll be asked during the install
