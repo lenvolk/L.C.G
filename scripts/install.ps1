@@ -82,18 +82,33 @@ Write-Info "Using ref '$Ref'."
 $archiveUrl = "https://codeload.github.com/$repoOwner/$repoName/zip/refs/heads/$Ref"
 
 $dirWasExplicit = $PSBoundParameters.ContainsKey('Dir')
-$Dir = [System.IO.Path]::GetFullPath($Dir)
+$defaultInstallRoot = 'C:\temp'
+$defaultInstallDir = Join-Path $defaultInstallRoot 'L.C.G'
 
 if (-not $dirWasExplicit) {
-  $windowsRoot = [Environment]::GetFolderPath('Windows')
-  if (-not [string]::IsNullOrWhiteSpace($windowsRoot) -and
-      $Dir.StartsWith($windowsRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-    $fallbackDir = Join-Path $HOME 'L.C.G'
-    Write-Info "Default install path '$Dir' is under the Windows system directory."
-    Write-Info "Using '$fallbackDir' instead."
-    $Dir = [System.IO.Path]::GetFullPath($fallbackDir)
+  Write-Info 'Where would you like to install L.C.G?'
+
+  if (-not (Test-Path $defaultInstallRoot)) {
+    New-Item -ItemType Directory -Path $defaultInstallRoot -Force | Out-Null
+  }
+
+  $requestedDir = $null
+  try {
+    $requestedDir = Read-Host "Install directory (press Enter for $defaultInstallDir)"
+  }
+  catch {
+    # In non-interactive runs, default to C:\temp\L.C.G.
+  }
+
+  if ([string]::IsNullOrWhiteSpace($requestedDir)) {
+    $Dir = $defaultInstallDir
+    Write-Info "Using default install directory '$Dir'."
+  } else {
+    $Dir = $requestedDir.Trim()
   }
 }
+
+$Dir = [System.IO.Path]::GetFullPath($Dir)
 
 # Block installation into cloud-synced directories (credentials would sync to the cloud).
 $dirLower = $Dir.ToLower()
