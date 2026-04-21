@@ -165,15 +165,32 @@ try {
   # Ensure execution policy allows running the bootstrap script in this process
   # (avoids hardcoding 'powershell' vs 'pwsh' and spawning a mismatched engine).
   Set-ExecutionPolicy -Scope Process Bypass -Force -ErrorAction SilentlyContinue
-  $bootstrapCode = 0
+  $bootstrapResult = $null
   if ($BootstrapArgs) {
-    $bootstrapCode = & .\scripts\bootstrap.ps1 @BootstrapArgs
+    $bootstrapResult = & .\scripts\bootstrap.ps1 @BootstrapArgs
   } else {
-    $bootstrapCode = & .\scripts\bootstrap.ps1
+    $bootstrapResult = & .\scripts\bootstrap.ps1
   }
-  if ($null -eq $bootstrapCode) {
+
+  # bootstrap.ps1 can emit regular output + a trailing numeric return value.
+  # Extract a numeric code without crashing on mixed output arrays.
+  $bootstrapCode = $null
+  if ($bootstrapResult -is [array]) {
+    $candidateCode = $bootstrapResult | Select-Object -Last 1
+  } else {
+    $candidateCode = $bootstrapResult
+  }
+
+  if ($candidateCode -is [int]) {
+    $bootstrapCode = $candidateCode
+  } elseif ($null -ne $candidateCode -and ([string]$candidateCode) -match '^-?\d+$') {
+    $bootstrapCode = [int]$candidateCode
+  } elseif ($LASTEXITCODE -is [int]) {
+    $bootstrapCode = $LASTEXITCODE
+  } else {
     $bootstrapCode = 0
   }
+
   return [int]$bootstrapCode
 }
 finally {
