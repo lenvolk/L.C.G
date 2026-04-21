@@ -109,7 +109,7 @@ Finally, click **Authorize github** to grant the device the `read:packages` scop
 
 ![Authorize the device](image/README/install-09-gh-authorize.jpg)
 
-Return to the terminal. The installer scaffolds your local vault, links the global `mcaps` command, and prints `✔ Bootstrap complete.`
+Return to the terminal. The installer scaffolds your local vault, links the global `lcg` command, and prints `✔ Bootstrap complete.`
 
 ---
 
@@ -123,7 +123,7 @@ Open VS Code in your install folder (`code ~/L.C.G` or just double-click the fol
 
 **Terminal:**
 
-Open any terminal, anywhere, and type `mcaps`. A new `copilot` session launches with all L.C.G. servers, agents, and skills loaded.
+Open any terminal, anywhere, and type `lcg`. A new `copilot` session launches with all L.C.G. servers, agents, and skills loaded.
 
 > Both interfaces are fully equivalent — same agents, skills, and MCP servers. See [Two Ways to Use L.C.G.](#two-ways-to-use-lcg) for details.
 
@@ -161,13 +161,13 @@ The installer and bootstrap are designed to finish unattended. For the curious, 
 2. **Verified prerequisites** — Node.js 18+, npm, git.
 3. **Installed missing tools automatically** (Windows via `winget` / Chocolatey; macOS via Homebrew):
    - **Azure CLI** (`az`) — for corp auth against CRM and M365.
-   - **GitHub Copilot CLI** — the official `@github/copilot` npm package, which provides the `copilot` binary used by `mcaps`. A `gh copilot` extension is configured as a fallback.
+   - **GitHub Copilot CLI** — the official `@github/copilot` npm package, which provides the `copilot` binary used by `lcg`. A `gh copilot` extension is configured as a fallback.
    - **Obsidian Desktop** — for editing your vault in a nice UI.
 4. **Prompted for `az login`** — sign in as `alias@microsoft.com`.
 5. **Ran `npm install`** for repo dependencies.
 6. **Walked through GitHub Packages auth** — uses your personal GitHub account (not your `_microsoft` EMU account).
 7. **Created a local vault** at `.vault/` inside the install folder and seeded it with starter templates under `_lcg/`.
-8. **Registered the global `mcaps` command** using a `.cmd` shim on Windows so it works in restricted-policy PowerShell.
+8. **Registered the global `lcg` command** using a `.cmd` shim on Windows so it works in restricted-policy PowerShell.
 
 > [!IMPORTANT]
 > When prompted for GitHub auth, use your **personal GitHub account** (e.g., `JohnDoe`), not your Enterprise Managed User account ending in `_microsoft`.

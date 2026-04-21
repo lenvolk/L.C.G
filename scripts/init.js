@@ -374,18 +374,18 @@ async function checkOnly() {
 
 // ── global alias registration ───────────────────────────────────────
 function printAliasFallback() {
-  const binPath = join(ROOT, "bin", "mcaps.js");
+  const binPath = join(ROOT, "bin", "lcg.js");
   if (isWindows) {
     const escaped = binPath.replace(/\\/g, "\\\\");
     console.log();
     warn("  Alternatives for PowerShell:");
     warn("");
     warn("  Option 1 — Add a function to your PowerShell profile:");
-    warn(`    Add-Content $PROFILE 'function mcaps { node "${escaped}" @args }'`);
+    warn(`    Add-Content $PROFILE 'function lcg { node "${escaped}" @args }'`);
     warn("    . $PROFILE   # reload your profile");
     warn("");
     warn("  Option 2 — Use from the repo directory:");
-    warn("    node bin\\mcaps.js");
+    warn("    node bin\\lcg.js");
     warn("");
     warn("  Option 3 — Retry from an elevated terminal:");
     warn("    npm link --ignore-scripts");
@@ -449,24 +449,24 @@ function hasNonPs1WindowsCommand(command) {
   return candidates.some((p) => /\.(cmd|exe|bat)$/i.test(p) || /\\[^\\.]+$/i.test(p));
 }
 
-function hasReachableMcapsCommand() {
-  if (!isWindows) return Boolean(tryRun("which mcaps"));
-  return hasNonPs1WindowsCommand("mcaps");
+function hasReachableLcgCommand() {
+  if (!isWindows) return Boolean(tryRun("which lcg"));
+  return hasNonPs1WindowsCommand("lcg");
 }
 
-function hasMcapsShim(npmPrefix) {
+function hasLcgShim(npmPrefix) {
   if (!npmPrefix) return false;
   const candidates = [
-    join(npmPrefix, "mcaps.cmd"),
-    join(npmPrefix, "mcaps.bat"),
-    join(npmPrefix, "mcaps"),
+    join(npmPrefix, "lcg.cmd"),
+    join(npmPrefix, "lcg.bat"),
+    join(npmPrefix, "lcg"),
   ];
   return candidates.some((p) => existsSync(p));
 }
 
-function normalizeMcapsShims(npmPrefix) {
+function normalizeLcgShims(npmPrefix) {
   if (!isWindows || !npmPrefix) return;
-  const psShim = join(npmPrefix, "mcaps.ps1");
+  const psShim = join(npmPrefix, "lcg.ps1");
   if (existsSync(psShim)) {
     try {
       execSync(`del /f /q "${psShim}"`, { stdio: "pipe", shell: true });
@@ -476,7 +476,7 @@ function normalizeMcapsShims(npmPrefix) {
   }
 }
 
-function createMcapsShims(npmPrefix) {
+function createLcgShims(npmPrefix) {
   if (!isWindows || !npmPrefix) return false;
 
   try {
@@ -484,15 +484,15 @@ function createMcapsShims(npmPrefix) {
       mkdirSync(npmPrefix, { recursive: true });
     }
 
-    const mcapsJs = join(ROOT, "bin", "mcaps.js");
-    const escapedCmdPath = mcapsJs.replace(/"/g, "\\\"");
+    const lcgJs = join(ROOT, "bin", "lcg.js");
+    const escapedCmdPath = lcgJs.replace(/"/g, "\\\"");
 
-    const cmdShim = join(npmPrefix, "mcaps.cmd");
+    const cmdShim = join(npmPrefix, "lcg.cmd");
     writeFileSync(cmdShim, `@echo off\r\nnode "${escapedCmdPath}" %*\r\n`, "utf-8");
 
     // Do not create a .ps1 shim. On corp-managed machines with Restricted
     // execution policy, PowerShell prefers .ps1 and then blocks execution.
-    normalizeMcapsShims(npmPrefix);
+    normalizeLcgShims(npmPrefix);
 
     return true;
   } catch {
@@ -500,7 +500,7 @@ function createMcapsShims(npmPrefix) {
   }
 }
 
-function ensurePowerShellProfileMcaps() {
+function ensurePowerShellProfileLcg() {
   if (!isWindows) return false;
 
   const policy = (tryRun("powershell -NoProfile -Command \"Get-ExecutionPolicy\"") || "").trim().toLowerCase();
@@ -508,17 +508,17 @@ function ensurePowerShellProfileMcaps() {
     return false;
   }
 
-  const mcapsJs = join(ROOT, "bin", "mcaps.js");
-  const escapedPath = mcapsJs.replace(/'/g, "''");
+  const lcgJs = join(ROOT, "bin", "lcg.js");
+  const escapedPath = lcgJs.replace(/'/g, "''");
   const cmd = [
     "$profilePath=$PROFILE.CurrentUserCurrentHost",
     "$dir=Split-Path -Parent $profilePath",
     "if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }",
     "if (-not (Test-Path $profilePath)) { New-Item -ItemType File -Path $profilePath -Force | Out-Null }",
-    `$fn=\"function mcaps { node '${escapedPath}' @args }\"`,
+    `$fn=\"function lcg { node '${escapedPath}' @args }\"`,
     "$raw=Get-Content -Path $profilePath -Raw",
     "if (-not $raw) { $raw='' }",
-    "if ($raw -notmatch 'function\\s+mcaps\\s*\\{') { Add-Content -Path $profilePath -Value \"`r`n$fn`r`n\" }",
+    "if ($raw -notmatch 'function\\s+lcg\\s*\\{') { Add-Content -Path $profilePath -Value \"`r`n$fn`r`n\" }",
   ].join("; ");
 
   return runBestEffort(`powershell -NoProfile -ExecutionPolicy Bypass -Command \"${cmd}\"`, ROOT);
@@ -528,24 +528,24 @@ function registerAlias() {
   console.log();
   console.log("  \x1b[1m\x1b[36m╔══════════════════════════════════════════════════════════╗\x1b[0m");
   console.log("  \x1b[1m\x1b[36m║                                                          ║\x1b[0m");
-  console.log("  \x1b[1m\x1b[36m║   Installing the 'mcaps' CLI binary globally              ║\x1b[0m");
+  console.log("  \x1b[1m\x1b[36m║   Installing the 'lcg' CLI binary globally              ║\x1b[0m");
   console.log("  \x1b[1m\x1b[36m║                                                          ║\x1b[0m");
-  console.log("  \x1b[1m\x1b[36m║   This registers bin/mcaps.js as a global command so      ║\x1b[0m");
-  console.log("  \x1b[1m\x1b[36m║   you can run 'mcaps' from any terminal, anywhere.        ║\x1b[0m");
+  console.log("  \x1b[1m\x1b[36m║   This registers bin/lcg.js as a global command so      ║\x1b[0m");
+  console.log("  \x1b[1m\x1b[36m║   you can run 'lcg' from any terminal, anywhere.        ║\x1b[0m");
   console.log("  \x1b[1m\x1b[36m║                                                          ║\x1b[0m");
   console.log("  \x1b[1m\x1b[36m╚══════════════════════════════════════════════════════════╝\x1b[0m");
   console.log();
 
   // Ensure bin script is executable on Unix
   if (!isWindows) {
-    const binScript = join(ROOT, "bin", "mcaps.js");
+    const binScript = join(ROOT, "bin", "lcg.js");
     try {
       execSync(`chmod +x "${binScript}"`, { stdio: "pipe" });
     } catch { /* best-effort */ }
   }
 
-  // Check if 'mcaps' is already linked and working
-  const existing = hasReachableMcapsCommand();
+  // Check if 'lcg' is already linked and working
+  const existing = hasReachableLcgCommand();
 
   try {
     // --ignore-scripts prevents recursive postinstall
@@ -557,9 +557,9 @@ function registerAlias() {
       shell: isWindows ? true : "/bin/sh",
     });
   } catch {
-    // If link failed but 'mcaps' already exists and works, that's fine
+    // If link failed but 'lcg' already exists and works, that's fine
     if (existing) {
-      ok("'mcaps' is already registered globally — no changes needed.");
+      ok("'lcg' is already registered globally — no changes needed.");
       return true;
     }
 
@@ -568,13 +568,13 @@ function registerAlias() {
       if (npmPrefix) {
         addPathToCurrentProcess(npmPrefix);
         ensureUserPathContains(npmPrefix);
-        createMcapsShims(npmPrefix);
+        createLcgShims(npmPrefix);
       }
-      ensurePowerShellProfileMcaps();
+      ensurePowerShellProfileLcg();
 
-      if (hasReachableMcapsCommand() || (npmPrefix && hasMcapsShim(npmPrefix))) {
-        ok("'mcaps' command was configured automatically.");
-        info("If this terminal cannot run 'mcaps' yet, open a new PowerShell window.");
+      if (hasReachableLcgCommand() || (npmPrefix && hasLcgShim(npmPrefix))) {
+        ok("'lcg' command was configured automatically.");
+        info("If this terminal cannot run 'lcg' yet, open a new PowerShell window.");
         return true;
       }
     }
@@ -588,16 +588,16 @@ function registerAlias() {
   if (isWindows) {
     const npmPrefix = tryRun("npm config get prefix");
     if (npmPrefix) {
-      normalizeMcapsShims(npmPrefix);
-      createMcapsShims(npmPrefix);
+      normalizeLcgShims(npmPrefix);
+      createLcgShims(npmPrefix);
     }
   }
 
   // Verify the command is actually reachable after linking
-  const found = hasReachableMcapsCommand();
+  const found = hasReachableLcgCommand();
 
   if (found) {
-    ok("'mcaps' is now available globally — try it from any directory!");
+    ok("'lcg' is now available globally — try it from any directory!");
     return true;
   }
 
@@ -605,11 +605,11 @@ function registerAlias() {
   if (isWindows) {
     const npmPrefix = tryRun("npm config get prefix");
     if (npmPrefix) {
-      normalizeMcapsShims(npmPrefix);
+      normalizeLcgShims(npmPrefix);
 
       // Ensure shim launchers exist even if npm link succeeds but does not
       // materialize command shims in this environment.
-      createMcapsShims(npmPrefix);
+      createLcgShims(npmPrefix);
 
       const hadPrefixInSession = (process.env.PATH || "")
         .split(";")
@@ -622,31 +622,31 @@ function registerAlias() {
         info("Persisted npm global bin path to User PATH.");
       }
 
-      const foundAfterRepair = hasReachableMcapsCommand();
+      const foundAfterRepair = hasReachableLcgCommand();
       if (foundAfterRepair) {
-        ok("'mcaps' is now available globally — PATH was repaired automatically.");
+        ok("'lcg' is now available globally — PATH was repaired automatically.");
         return true;
       }
 
       // Accept success if the shim exists. In some PowerShell sessions,
       // command discovery lags until a new terminal is opened.
-      if (hasMcapsShim(npmPrefix)) {
-        ok("'mcaps' shim was installed and PATH was configured automatically.");
-        info("Open a new terminal to use 'mcaps' globally.");
+      if (hasLcgShim(npmPrefix)) {
+        ok("'lcg' shim was installed and PATH was configured automatically.");
+        info("Open a new terminal to use 'lcg' globally.");
         return true;
       }
 
       // Last automatic fallback: persist a PowerShell profile function.
-      if (ensurePowerShellProfileMcaps()) {
-        ok("PowerShell profile was updated with an 'mcaps' function automatically.");
-        info("Open a new PowerShell window and run 'mcaps'.");
+      if (ensurePowerShellProfileLcg()) {
+        ok("PowerShell profile was updated with an 'lcg' function automatically.");
+        info("Open a new PowerShell window and run 'lcg'.");
         return true;
       }
     }
   }
 
   // npm link appeared to succeed but the command isn't callable
-  warn("npm link succeeded, but 'mcaps' was not found in your PATH.");
+  warn("npm link succeeded, but 'lcg' was not found in your PATH.");
 
   if (isWindows) {
     const npmPrefix = tryRun("npm config get prefix");
@@ -892,12 +892,12 @@ if (checkMode) {
       console.log();
       console.log("  \x1b[1m\x1b[32m┌─────────────────────────────────────────────────────────────┐\x1b[0m");
       console.log("  \x1b[1m\x1b[32m│                                                             │\x1b[0m");
-      console.log("  \x1b[1m\x1b[32m│   ★  'mcaps' CLI installed successfully!                    │\x1b[0m");
+      console.log("  \x1b[1m\x1b[32m│   ★  'lcg' CLI installed successfully!                    │\x1b[0m");
       console.log("  \x1b[1m\x1b[32m│                                                             │\x1b[0m");
       console.log("  \x1b[1m\x1b[32m│   Run from any terminal, any directory:                     │\x1b[0m");
       console.log("  \x1b[1m\x1b[32m│                                                             │\x1b[0m");
-      console.log("  \x1b[1m\x1b[33m│       'mcaps'                                                 │\x1b[0m");
-      console.log("  \x1b[1m\x1b[33m│       'mcaps' -p \"morning triage\"                             │\x1b[0m");
+      console.log("  \x1b[1m\x1b[33m│       'lcg'                                                 │\x1b[0m");
+      console.log("  \x1b[1m\x1b[33m│       'lcg' -p \"morning triage\"                             │\x1b[0m");
       console.log("  \x1b[1m\x1b[32m│                                                             │\x1b[0m");
       console.log("  \x1b[1m\x1b[32m│   Launches Copilot CLI with all L.C.G servers,          │\x1b[0m");
       console.log("  \x1b[1m\x1b[32m│   agents, and skills — no need to cd into the repo.        │\x1b[0m");
@@ -908,7 +908,7 @@ if (checkMode) {
       console.log();
       console.log("  \x1b[1m\x1b[33m┌─────────────────────────────────────────────────────────────┐\x1b[0m");
       console.log("  \x1b[1m\x1b[33m│                                                             │\x1b[0m");
-      console.log("  \x1b[1m\x1b[33m│   ⚠  'mcaps' CLI was NOT installed globally.                │\x1b[0m");
+      console.log("  \x1b[1m\x1b[33m│   ⚠  'lcg' CLI was NOT installed globally.                │\x1b[0m");
       console.log("  \x1b[1m\x1b[33m│   See the instructions above to register it manually.      │\x1b[0m");
       console.log("  \x1b[1m\x1b[33m│                                                             │\x1b[0m");
       console.log("  \x1b[1m\x1b[33m└─────────────────────────────────────────────────────────────┘\x1b[0m");
@@ -940,7 +940,7 @@ if (checkMode) {
     1. Open this repo in VS Code:  code .
     2. MCP servers auto-start via .vscode/mcp.json
     3. Open Copilot chat (Cmd+Shift+I) and try: "Who am I in MSX?"
-    4. Or just run 'mcaps' from any terminal!
+    4. Or just run 'lcg' from any terminal!
 `);
     } else {
       console.log(`
@@ -952,7 +952,7 @@ if (checkMode) {
     3. Open this repo in VS Code:  code .
     4. MCP servers auto-start via .vscode/mcp.json
     5. Open Copilot chat (Cmd+Shift+I) and try: "Who am I in MSX?"
-    6. Or just run 'mcaps' from any terminal!
+    6. Or just run 'lcg' from any terminal!
 `);
     }
   } else {

@@ -250,7 +250,7 @@ function upsertManagedBlock(filePath, block) {
   // Remove our existing managed block
   const pattern = new RegExp(`${MANAGED_START}[\\s\\S]*?${MANAGED_END}\\n?`, "m");
   current = current.replace(pattern, "");
-  // Remove other tools' managed blocks for the same registry (e.g. mcaps-iq)
+  // Remove other tools' managed blocks for the same registry (e.g. lcg)
   // to prevent stale token conflicts — only one authToken per registry should exist
   current = current.replace(/^# >>> .+ github-packages auth >>>[\s\S]*?# <<< .+ github-packages auth <<<\n?/gm, "");
   // Remove any bare //npm.pkg.github.com/:_authToken lines (stale PATs from manual edits)

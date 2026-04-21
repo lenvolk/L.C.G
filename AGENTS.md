@@ -12,7 +12,7 @@ For the *runtime* Chief-of-Staff persona (triage, vault writes, M365 link policy
 
 ## What this repo is
 
-`mcaps-iq` / **L.C.G.** ("Let Copilot Grind") — a Node.js ≥18, ESM-only CLI + prompt toolkit that wraps GitHub Copilot CLI. Surfaces:
+`lcg` / **L.C.G.** ("Let Copilot Grind") — a Node.js ≥18, ESM-only CLI + prompt toolkit that wraps GitHub Copilot CLI. Surfaces:
 
 - **Tasks** — [scripts/tasks/](scripts/tasks/), dispatched by [scripts/run.js](scripts/run.js). Scheduled or on-demand.
 - **Prompts** — [.github/prompts/](.github/prompts/). Copilot-invocable workflows (`*.prompt.md`).
