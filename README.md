@@ -55,60 +55,91 @@ Set-ExecutionPolicy -Scope Process Bypass -Force; irm "https://raw.githubusercon
 
 ---
 
-### Step 1: What The Bootstrap Does
+### Step 1: Start Using L.C.G.
+
+When the installer finishes, everything is ready to go. Pick either path:
+
+**VS Code (recommended):**
+
+Open VS Code in your install folder (`code ~/L.C.G` or just double-click the folder in VS Code) → open **Copilot Chat** (`⌃⌘I` on macOS / `Ctrl+Alt+I` on Windows) → select the **Chief of Staff** agent → start typing.
+
+**Terminal:**
+
+Open any terminal, anywhere, and type `mcaps`. A new `copilot` session launches with all L.C.G. servers, agents, and skills loaded.
+
+> Both interfaces are fully equivalent — same agents, skills, and MCP servers. See [Two Ways to Use L.C.G.](#two-ways-to-use-lcg) for details.
+
+---
+
+### Step 2: Personalize It (Optional, 5 Minutes)
+
+Defaults are fine for day one. When you want L.C.G. to match *your* role, VIPs, and cadence, run the onboarding wizard.
+
+In VS Code → **Copilot Chat** → **Chief of Staff** agent → type:
+
+```
+/onboarding
+```
+
+The wizard asks about your:
+
+1. **Role** — GM, CSAM, Specialist, or M1 Manager
+2. **Industry** — Segment you cover (scopes CRM + Power BI queries)
+3. **Team** — By territory, seller list, org hierarchy, or just you
+4. **Forecast targets** — Optional quota and coverage multiple
+5. **VIP list** — High-priority senders
+6. **Operating rhythm** — Default weekly cadences
+
+Answers are saved in your vault under `_lcg/` as plain markdown. Re-run `/onboarding` anytime, or edit the files directly.
+
+---
+
+<details>
+<summary><strong>What the installer actually did (click to expand)</strong></summary>
+
+The installer and bootstrap are designed to finish unattended. For the curious, here's everything that happened:
+
+1. **Downloaded** the repo to your install directory (default: `~/L.C.G`).
+2. **Verified prerequisites** — Node.js 18+, npm, git.
+3. **Installed missing tools automatically** (Windows via `winget` / Chocolatey; macOS via Homebrew):
+   - **Azure CLI** (`az`) — for corp auth against CRM and M365.
+   - **GitHub Copilot CLI** — the official `@github/copilot` npm package, which provides the `copilot` binary used by `mcaps`. A `gh copilot` extension is configured as a fallback.
+   - **Obsidian Desktop** — for editing your vault in a nice UI.
+4. **Prompted for `az login`** — sign in as `alias@microsoft.com`.
+5. **Ran `npm install`** for repo dependencies.
+6. **Walked through GitHub Packages auth** — uses your personal GitHub account (not your `_microsoft` EMU account).
+7. **Created a local vault** at `.vault/` inside the install folder and seeded it with starter templates under `_lcg/`.
+8. **Registered the global `mcaps` command** using a `.cmd` shim on Windows so it works in restricted-policy PowerShell.
 
 > [!IMPORTANT]
 > When prompted for GitHub auth, use your **personal GitHub account** (e.g., `JohnDoe`), not your Enterprise Managed User account ending in `_microsoft`.
 
-The bootstrap is designed to finish unattended whenever possible. It will:
-
-1. **Verify prerequisites** — Node.js 18+, npm, git.
-2. **Install missing tools automatically** (Windows via `winget` / Chocolatey; macOS via Homebrew):
-   - **Azure CLI** (`az`) — for corp auth against CRM and M365.
-   - **GitHub Copilot CLI** — the official `@github/copilot` npm package, which provides the `copilot` binary used by `mcaps`. A `gh copilot` extension is configured as a fallback if the primary install cannot run.
-   - **Obsidian Desktop** (optional, for the vault UI).
-3. **Prompt for `az login`** with guidance to sign in as `alias@microsoft.com`.
-4. **Run `npm install`** for the repo dependencies.
-5. **Walk through GitHub Packages auth and `.env` setup**.
-6. **Register the global `mcaps` command** and ensure the launcher works in a fresh PowerShell window (uses a `.cmd` shim on Windows so restricted execution policies don't block it).
-
 > [!TIP]
-> Already have Node.js? Make sure it's v18+. Run `./scripts/bootstrap.sh --check` (macOS/Linux) or `./scripts/bootstrap.ps1 -Check` (Windows) for a dry prerequisite check.
+> Run `./scripts/bootstrap.sh --check` (macOS/Linux) or `./scripts/bootstrap.ps1 -Check` (Windows) for a dry prerequisite check at any time.
 
-### Step 2: Configure Your `.env` File
+</details>
 
-```bash
-cp .env.example .env
-```
+<details>
+<summary><strong>Use a different Obsidian vault (click to expand)</strong></summary>
 
-Open `.env` and set your vault path:
+The installer creates a local vault inside your install folder (`.vault/`). If you already have an Obsidian vault elsewhere and want L.C.G. to use that instead:
+
+1. Open `.env` in your install folder.
+2. Set the path:
 
 ```dotenv
 OBSIDIAN_VAULT_PATH="/Path/To/Your/Obsidian/Vault"
 ```
 
-> [!NOTE]
-> `.env` is git-ignored — your paths and secrets stay local. The Obsidian Intelligence Layer MCP server uses this variable. Skip this and vault features won't work.
-
-### Step 3: Set Up Your Obsidian Vault
-
-L.C.G. uses an [Obsidian](https://obsidian.md) vault as its local "second brain" — plain markdown files for customer notes, meeting history, drafts, and learning corrections.
-
-#### 3a. Create or choose a vault
-
-If you don't have one yet: download [Obsidian](https://obsidian.md) → **Create new vault** → pick a name and location you'll remember.
-
-Otherwise, note the full path to your existing vault (e.g., `/Users/you/Documents/Obsidian/My Vault`) and make sure Step 2's `.env` points to it.
-
-#### 3b. Bootstrap the vault structure
+3. Seed it with L.C.G. starter templates (safe — never overwrites existing files):
 
 ```bash
-cd ~/L.C.G && npm run vault:init
+npm run vault:init
 ```
 
-This copies starter templates into your vault (never overwrites existing files). Afterward your vault will contain:
+This adds the following under your vault, without touching any of your existing notes:
 
-| Created | Purpose |
+| Added | Purpose |
 |---------|---------|
 | `_lcg/preferences.md` | Triage labels, display preferences |
 | `_lcg/vip-list.md` | VIP senders that get priority in triage |
@@ -118,46 +149,9 @@ This copies starter templates into your vault (never overwrites existing files).
 | `_lcg/templates/` | Meeting briefs, update requests, weekly summaries |
 | `Daily/`, `Meetings/`, `Weekly/` | Working output folders |
 
-> [!TIP]
-> These are just markdown files — browse and edit them in Obsidian anytime.
+> `.env` is git-ignored. Your paths and secrets stay local.
 
-#### 3c. Run the onboarding wizard
-
-In VS Code → **Copilot Chat** → select **Chief of Staff** agent → type:
-
-```
-/onboarding
-```
-
-The wizard (~5 min) asks about your:
-
-1. **Role** — GM, CSAM, Specialist, or M1 Manager
-2. **Industry** — Segment you cover (scopes CRM + Power BI queries)
-3. **Team** — By territory, seller list, org hierarchy, or just you
-4. **Forecast targets** — Optional quota and coverage multiple
-5. **VIP list** — High-priority senders
-6. **Operating rhythm** — Default weekly cadences
-
-Answers are saved to `_lcg/role.md` and related config files. Re-run `/onboarding` anytime, or edit the files directly.
-
-> [!NOTE]
-> Skipping onboarding is fine — L.C.G. uses defaults. But personalization makes every workflow sharper.
-
----
-
-### Step 4: Start Using L.C.G.
-
-Pick either path:
-
-**VS Code (recommended for most users):**
-
-In VS Code, open **Copilot Chat** (sidebar icon or `⌃⌘I` / `Ctrl+Alt+I`) → select the **Chief of Staff** agent → start typing.
-
-**Terminal:**
-
-Open any terminal and type `mcaps` to start an interactive session.
-
-> Both interfaces are fully equivalent — same agents, skills, and MCP servers. See [Two Ways to Use L.C.G.](#two-ways-to-use-lcg) for details.
+</details>
 
 ---
 
