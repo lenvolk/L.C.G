@@ -62,7 +62,7 @@ if ($dirLower -match 'onedrive|dropbox|google drive|icloud') {
   Write-Host ''
   Write-Host 'Choose a non-synced directory instead:' -ForegroundColor Cyan
   Write-Host '  ... | iex; Install-LCG -Dir "$HOME\L.C.G"' -ForegroundColor Cyan
-  exit 1
+  return 1
 }
 
 if ($dirExists -and -not $Force -and -not $dirIsEmpty) {
@@ -115,7 +115,14 @@ try {
   } else {
     & .\scripts\bootstrap.ps1
   }
-  exit $LASTEXITCODE
+
+  $bootstrapCode = if ($LASTEXITCODE -is [int]) { $LASTEXITCODE } else { 0 }
+  if ($bootstrapCode -ne 0) {
+    throw "Bootstrap failed with exit code $bootstrapCode. Re-run .\\scripts\\bootstrap.ps1 in '$Dir' to see details."
+  }
+
+  Write-Info 'Bootstrap completed successfully.'
+  return 0
 }
 finally {
   if (Test-Path $tempRoot) {

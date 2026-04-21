@@ -73,7 +73,7 @@ if (Test-Node) {
   if (-not (Test-Node)) {
     Say-Fail "Node installation did not succeed (or PATH needs a new shell)."
     Say-Info "Open a new PowerShell window and re-run this script."
-    exit 1
+    return 1
   }
   Say-Ok "Node.js $((& node -v)) installed"
 }
@@ -87,4 +87,7 @@ if ($SkipInstall) { $argsToPass += "--skip-install" }
 if ($Rest)        { $argsToPass += $Rest }
 
 & node (Join-Path $Root "scripts\bootstrap.js") @argsToPass
-exit $LASTEXITCODE
+if ($LASTEXITCODE -is [int]) {
+  return $LASTEXITCODE
+}
+return 0
