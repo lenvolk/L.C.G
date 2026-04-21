@@ -195,6 +195,18 @@ try {
     throw "Bootstrap failed with exit code $bootstrapCode. Re-run .\\scripts\\bootstrap.ps1 in '$Dir' to see details."
   }
 
+  $hasVSCode = [bool](Get-Command code -ErrorAction SilentlyContinue)
+  if (-not $hasVSCode) {
+    Write-Host "[WARN] VS Code not found. Install VS Code + GitHub Copilot Chat before Step 4." -ForegroundColor Yellow
+    Write-Host "       https://code.visualstudio.com/" -ForegroundColor Cyan
+  }
+
+  $hasObsidian = [bool](Get-Command obsidian -ErrorAction SilentlyContinue)
+  if (-not $hasObsidian) {
+    Write-Host "[WARN] Obsidian not found. Vault workflows are easier with Obsidian installed." -ForegroundColor Yellow
+    Write-Host "       https://obsidian.md/download" -ForegroundColor Cyan
+  }
+
   Write-Info 'Bootstrap completed successfully.'
   return
 }

@@ -55,21 +55,57 @@ function has(cmd) {
 }
 
 function resolveExec(cmd) {
-  if (isWin && cmd === "npm") {
-    return "npm.cmd";
-  }
   return cmd;
 }
 
 function version(cmd, flag = "--version") {
+  if (isWin && cmd === "npm") {
+    const r = spawnSync("cmd.exe", ["/d", "/s", "/c", "npm", flag], { encoding: "utf-8" });
+    if (r.status !== 0) return null;
+    return (r.stdout || r.stderr).trim().split("\n")[0];
+  }
   const r = spawnSync(resolveExec(cmd), [flag], { encoding: "utf-8" });
   if (r.status !== 0) return null;
   return (r.stdout || r.stderr).trim().split("\n")[0];
 }
 
 function run(cmd, cmdArgs, opts = {}) {
+  if (isWin && cmd === "npm") {
+    const r = spawnSync("cmd.exe", ["/d", "/s", "/c", "npm", ...cmdArgs], { stdio: "inherit", cwd: ROOT, ...opts });
+    return r.status ?? 1;
+  }
   const r = spawnSync(resolveExec(cmd), cmdArgs, { stdio: "inherit", cwd: ROOT, ...opts });
   return r.status ?? 1;
+}
+
+function hasVsCode() {
+  if (has("code")) return true;
+  if (!isWin) return false;
+
+  const localAppData = process.env.LOCALAPPDATA || "";
+  const candidates = [
+    join(localAppData, "Programs", "Microsoft VS Code", "Code.exe"),
+    join(localAppData, "Programs", "Microsoft VS Code Insiders", "Code - Insiders.exe"),
+    "C:\\Program Files\\Microsoft VS Code\\Code.exe",
+    "C:\\Program Files\\Microsoft VS Code Insiders\\Code - Insiders.exe",
+  ];
+
+  return candidates.some((candidate) => existsSync(candidate));
+}
+
+function hasObsidian() {
+  if (has("obsidian")) return true;
+  if (!isWin) return false;
+
+  const localAppData = process.env.LOCALAPPDATA || "";
+  const appData = process.env.APPDATA || "";
+  const candidates = [
+    join(localAppData, "Obsidian", "Obsidian.exe"),
+    join(appData, "Microsoft", "Windows", "Start Menu", "Programs", "Obsidian.lnk"),
+    "C:\\Program Files\\Obsidian\\Obsidian.exe",
+  ];
+
+  return candidates.some((candidate) => existsSync(candidate));
 }
 
 // ── Step 1: prereq checks ───────────────────────────────────────────
@@ -119,6 +155,20 @@ if (has("copilot")) {
 } else {
   warn("`copilot` not on PATH — task runners will fall back to the bundled VS Code binary");
   info("Install: https://docs.github.com/en/copilot/github-copilot-in-the-cli");
+}
+
+if (hasVsCode()) {
+  ok("VS Code detected");
+} else {
+  warn("VS Code not detected. Install VS Code + GitHub Copilot Chat before using L.C.G in chat.");
+  info("Install: https://code.visualstudio.com/");
+}
+
+if (hasObsidian()) {
+  ok("Obsidian detected");
+} else {
+  warn("Obsidian not detected. Vault workflows can still initialize, but review/edit is easier with Obsidian installed.");
+  info("Install: https://obsidian.md/download");
 }
 
 // pwsh (optional, only needed for setup-outlook-rules)

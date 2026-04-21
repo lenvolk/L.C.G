@@ -33,6 +33,45 @@ function Say-Warn ($m) { Write-Host "  [WARN] $m" -ForegroundColor Yellow }
 function Say-Fail ($m) { Write-Host "  [FAIL] $m" -ForegroundColor Red }
 function Say-Info ($m) { Write-Host "  [INFO] $m" -ForegroundColor Cyan }
 
+function Test-VSCode {
+  if (Get-Command code -ErrorAction SilentlyContinue) { return $true }
+  $local = $env:LOCALAPPDATA
+  $candidates = @(
+    (Join-Path $local 'Programs\Microsoft VS Code\Code.exe'),
+    (Join-Path $local 'Programs\Microsoft VS Code Insiders\Code - Insiders.exe'),
+    'C:\Program Files\Microsoft VS Code\Code.exe',
+    'C:\Program Files\Microsoft VS Code Insiders\Code - Insiders.exe'
+  )
+  return $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+}
+
+function Test-Obsidian {
+  if (Get-Command obsidian -ErrorAction SilentlyContinue) { return $true }
+  $local = $env:LOCALAPPDATA
+  $appData = $env:APPDATA
+  $candidates = @(
+    (Join-Path $local 'Obsidian\Obsidian.exe'),
+    (Join-Path $appData 'Microsoft\Windows\Start Menu\Programs\Obsidian.lnk'),
+    'C:\Program Files\Obsidian\Obsidian.exe'
+  )
+  return $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+}
+
+function Install-VSCode {
+  if (Get-Command winget -ErrorAction SilentlyContinue) {
+    Say-Info "Installing VS Code via winget..."
+    & winget install --id Microsoft.VisualStudioCode --silent --accept-package-agreements --accept-source-agreements
+    return
+  }
+  if (Get-Command choco -ErrorAction SilentlyContinue) {
+    Say-Info "Installing VS Code via Chocolatey..."
+    & choco install vscode -y
+    return
+  }
+  Say-Warn "Cannot auto-install VS Code (winget/choco not found)."
+  Say-Info "Install manually: https://code.visualstudio.com/"
+}
+
 function Test-Node {
   $node = Get-Command node -ErrorAction SilentlyContinue
   if (-not $node) { return $false }
@@ -76,6 +115,37 @@ if (Test-Node) {
     return 1
   }
   Say-Ok "Node.js $((& node -v)) installed"
+}
+
+Write-Host "--- Checking app prerequisites ---" -ForegroundColor Cyan
+if (Test-VSCode) {
+  Say-Ok "VS Code detected"
+} else {
+  if ($Check) {
+    Say-Warn "VS Code not detected. Install VS Code + GitHub Copilot Chat to use L.C.G chat workflows."
+    Say-Info "Download: https://code.visualstudio.com/"
+  } else {
+    Say-Warn "VS Code not detected. Attempting auto-install..."
+    Install-VSCode
+
+    # Refresh PATH in case a new install added binaries.
+    $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
+                [Environment]::GetEnvironmentVariable("Path","User")
+
+    if (Test-VSCode) {
+      Say-Ok "VS Code installed"
+    } else {
+      Say-Warn "VS Code install was not confirmed in this session."
+      Say-Info "Install manually: https://code.visualstudio.com/"
+    }
+  }
+}
+
+if (Test-Obsidian) {
+  Say-Ok "Obsidian detected"
+} else {
+  Say-Warn "Obsidian not detected. Vault setup can still run, but authoring is easier with Obsidian installed."
+  Say-Info "Download: https://obsidian.md/download"
 }
 
 # -- Hand off to bootstrap.js --------------------------------------

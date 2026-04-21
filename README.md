@@ -20,16 +20,26 @@
 ## Quick Start (5 Minutes)
 Before you begin, make sure you have:
 
-- [ ] **Microsoft corporate VPN** connected
 - [ ] **Microsoft corp account** (e.g., `your-alias@microsoft.com`)
 - [ ] **GitHub Copilot License** — [Get one here (Microsoft Internal)](https://aka.ms/copilot)
+- [ ] **VS Code** + **GitHub Copilot Chat extension** installed
+- [ ] **Obsidian** installed (recommended for vault workflows)
+- [ ] **Git** installed (`git --version`)
+- [ ] **Azure CLI** installed (`az version`) for CRM / WorkIQ auth
+- [ ] **GitHub CLI (`gh`)** installed (`gh --version`) for GitHub Packages auth
+
+> [!NOTE]
+> VPN is typically required for live MCP runtime access (MSX/M365/Agent365 endpoints), not for the base install itself.
 
 ---
 
-### Step 0: Run The Installer
+### Step 1: Run The Installer
 
 > [!CAUTION]
 > **The script creates an `L.C.G` folder in your current directory.** We recommend running from your home folder (`cd ~`). Don't run it inside system directories, shared drives, or folders with unrelated work.
+
+> [!IMPORTANT]
+> When prompted for GitHub auth, use your **personal GitHub account** (e.g., `JohnDoe`), not your Enterprise Managed User account ending in `_microsoft`.
 
 #### macOS / Linux
 
@@ -51,36 +61,63 @@ curl -fsSL https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/instal
 Set-ExecutionPolicy -Scope Process Bypass -Force; irm https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/install.ps1 | iex
 ```
 
-For non-main branch testing on Windows PowerShell 5.1, use:
+The installer prompts for where to install L.C.G. Press **Enter** to use the default `C:\temp\L.C.G` (it creates `C:\temp` if needed), or type another directory path. Run it from an already-open PowerShell window so prompts and any errors remain visible.
+
+<details>
+<summary><strong>What the installer does (for the curious)</strong></summary>
+
+1. Installs **Node.js 18+** if missing.
+2. Installs **VS Code** on Windows if missing (best effort via `winget`/Chocolatey).
+3. Runs `npm install`.
+4. Walks you through **GitHub Packages auth** (`npm run auth:packages`) and `.env` setup.
+5. Registers the global **`mcaps`** command for advanced users.
+
+**Already have Node.js?** Make sure it's v18+:
+- macOS/Linux: `./scripts/bootstrap.sh --check`
+- Windows PowerShell: `Set-ExecutionPolicy -Scope Process Bypass -Force; .\scripts\bootstrap.ps1 -Check`
+
+**Testing a non-main branch?** Windows PowerShell 5.1:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass -Force
 & ([ScriptBlock]::Create((irm https://raw.githubusercontent.com/JinLee794/L.C.G/<branch>/scripts/install.ps1))) -Ref <branch>
 ```
 
-The installer prompts for where to install L.C.G. Press **Enter** to use the default `C:\temp\L.C.G` (it creates `C:\temp` if needed), or type another directory path. Run it from an already-open PowerShell window so prompts and any errors remain visible.
+</details>
 
----
+### Step 2: Set Up Your Obsidian Vault
 
-### Step 1: What The Bootstrap Does
+L.C.G. uses an [Obsidian](https://obsidian.md) vault as its local "second brain" — plain markdown files for customer notes, meeting history, drafts, and learning corrections.
 
-> [!IMPORTANT]
-> When prompted for GitHub auth, use your **personal GitHub account** (e.g., `JohnDoe`), not your Enterprise Managed User account ending in `_microsoft`.
+#### 2a. Install Obsidian (if needed)
 
-The bootstrap:
+Already have Obsidian installed? Skip to 2b.
 
-1. Installs **Node.js 18+** if missing.
-2. Runs `npm install`.
-3. Walks you through **GitHub Packages auth** and `.env` setup.
-4. Registers the global **`mcaps`** command.
+Otherwise, install it first: [obsidian.md/download](https://obsidian.md/download)
 
-> [!TIP]
-> Already have Node.js? Make sure it's v18+. Run `./scripts/bootstrap.sh --check` (macOS/Linux) or `./scripts/bootstrap.ps1 -Check` (Windows) for a dry prerequisite check.
+#### 2b. Create a vault and point L.C.G. at it
 
-### Step 2: Configure Your `.env` File
+1. Open Obsidian → **Create new vault** → pick a name and a location you'll remember (e.g., `C:\Users\you\Documents\Obsidian\L.C.G`).
+   - *Already have a vault you want to reuse?* Just note its full path — no need to create a new one.
+2. Copy the **full path** of that vault to your clipboard — you'll paste it into `.env` in Step 3 so L.C.G. knows where to read and write.
+
+> [!NOTE]
+> L.C.G. never touches your vault until you tell it where the vault lives. Step 3 is what actually wires them together.
+
+### Step 3: Configure `.env` And Bootstrap Vault Files
+
+#### 3a. Configure your `.env` file
+
+macOS/Linux:
 
 ```bash
 cp .env.example .env
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
 ```
 
 Open `.env` and set your vault path:
@@ -92,20 +129,18 @@ OBSIDIAN_VAULT_PATH="/Path/To/Your/Obsidian/Vault"
 > [!NOTE]
 > `.env` is git-ignored — your paths and secrets stay local. The Obsidian Intelligence Layer MCP server uses this variable. Skip this and vault features won't work.
 
-### Step 3: Set Up Your Obsidian Vault
-
-L.C.G. uses an [Obsidian](https://obsidian.md) vault as its local "second brain" — plain markdown files for customer notes, meeting history, drafts, and learning corrections.
-
-#### 3a. Create or choose a vault
-
-If you don't have one yet: download [Obsidian](https://obsidian.md) → **Create new vault** → pick a name and location you'll remember.
-
-Otherwise, note the full path to your existing vault (e.g., `/Users/you/Documents/Obsidian/My Vault`) and make sure Step 2's `.env` points to it.
-
 #### 3b. Bootstrap the vault structure
+
+macOS/Linux:
 
 ```bash
 cd ~/L.C.G && npm run vault:init
+```
+
+Windows PowerShell (default install path):
+
+```powershell
+Set-Location C:\temp\L.C.G; npm run vault:init
 ```
 
 This copies starter templates into your vault (never overwrites existing files). Afterward your vault will contain:
@@ -123,9 +158,20 @@ This copies starter templates into your vault (never overwrites existing files).
 > [!TIP]
 > These are just markdown files — browse and edit them in Obsidian anytime.
 
-#### 3c. Run the onboarding wizard
+---
 
-In VS Code → **Copilot Chat** → select **Chief of Staff** agent → type:
+### Step 4: Start Using L.C.G. in VS Code
+
+1. Open the L.C.G. folder in VS Code:
+   - Windows: `code C:\temp\L.C.G`
+   - macOS/Linux: `code ~/L.C.G`
+2. Open **Copilot Chat** (sidebar icon, or `Ctrl+Alt+I` on Windows / `⌃⌘I` on macOS).
+3. In the agent dropdown at the top of the chat panel, pick **Chief of Staff**.
+4. MCP servers auto-start from `.vscode/mcp.json` the first time the chat opens — you may be prompted to sign in to Azure or accept MCP server permissions. Accept them.
+
+#### First thing to do: run the onboarding wizard
+
+In Copilot Chat, type:
 
 ```
 /onboarding
@@ -140,26 +186,38 @@ The wizard (~5 min) asks about your:
 5. **VIP list** — High-priority senders
 6. **Operating rhythm** — Default weekly cadences
 
-Answers are saved to `_lcg/role.md` and related config files. Re-run `/onboarding` anytime, or edit the files directly.
+Answers are saved to `_lcg/role.md` and related config files in your vault. Re-run `/onboarding` anytime, or edit the files directly.
 
 > [!NOTE]
 > Skipping onboarding is fine — L.C.G. uses defaults. But personalization makes every workflow sharper.
 
+#### Then try your first command
+
+Still in Copilot Chat, try any of these:
+
+- `/morning-triage` — prioritized daily brief
+- `/meeting-brief` — one-page prep for your next meeting
+- `Review my pipeline` — plain-English request works too
+
+See [What You Get — Day One](#what-you-get--day-one) for the full menu.
+
 ---
 
-### Step 4: Start Using L.C.G.
+### Step 5: Verify Runtime Readiness (optional)
 
-Pick either path:
+If something isn't working, run a quick health check from the L.C.G. folder:
 
-**VS Code (recommended for most users):**
+```bash
+npm run check
+```
 
-In VS Code, open **Copilot Chat** (sidebar icon or `⌃⌘I` / `Ctrl+Alt+I`) → select the **Chief of Staff** agent → start typing.
+Expected:
 
-**Terminal:**
+- Node.js and npm show as `✔`
+- Warnings for `az` / `gh` if they're not installed yet
+- MCP server packages show as configured
 
-Open any terminal and type `mcaps` to start an interactive session.
-
-> Both interfaces are fully equivalent — same agents, skills, and MCP servers. See [Two Ways to Use L.C.G.](#two-ways-to-use-lcg) for details.
+If `az` or `gh` is missing, install them and re-run the check to unlock full CRM/M365 capabilities.
 
 ---
 
@@ -347,10 +405,13 @@ All live-data connections are declared in `.vscode/mcp.json`.
 | --- | --- |
 | `npm run setup` | Verify prerequisites and configure local env |
 | `npm run check` | Verify environment and workspace config |
+| `npm run auth:packages` | Configure GitHub Packages authentication via `gh` |
 | `npm run vault:init` | Bootstrap Obsidian vault from templates |
-| `npm run morning:validate` | Validate morning brief output |
-| `npm run meeting:validate` | Validate meeting brief |
+| `npm run task:list` | List built-in automations |
+| `npm run task:morning` | Run morning triage task |
+| `npm run task:milestone` | Run milestone review task |
 | `npm run eval` | Run evaluation suite |
+| `npm run eval:matrix:dry` | Dry-run matrix lane execution |
 
 </details>
 
@@ -365,16 +426,10 @@ All live-data connections are declared in `.vscode/mcp.json`.
 **Fix it in one step:**
 
 ```bash
-npm login --registry=https://npm.pkg.github.com
+npm run auth:packages
 ```
 
-When prompted:
-
-- **Username:** your GitHub username
-- **Password:** a personal access token (classic) with the `read:packages` scope
-- **Email:** your GitHub email
-
-That's it. The token is saved to your user-level `~/.npmrc` and applies everywhere.
+This flow uses GitHub CLI, validates package reachability, and updates your user-level `~/.npmrc` safely.
 
 <details>
 <summary>Manual alternative (if <code>npm login</code> doesn't work)</summary>
