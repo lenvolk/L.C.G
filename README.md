@@ -48,7 +48,7 @@ curl -fsSL https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/instal
 3. Paste this and press **Enter**:
 
 ```powershell
-Set-ExecutionPolicy -Scope Process Bypass -Force; irm https://raw.githubusercontent.com/JinLee794/L.C.G/main/scripts/install.ps1 | iex
+Set-ExecutionPolicy -Scope Process Bypass -Force; irm "https://raw.githubusercontent.com/lenvolk/L.C.G/main/scripts/install.ps1?nocache=$(Get-Date -UFormat %s)" | iex
 ```
 
 The installer creates `L.C.G/` in your current directory and runs the bootstrap automatically. Follow any prompts that appear.
