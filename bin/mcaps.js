@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveCopilotBin } from "../scripts/lib/copilot.js";
@@ -28,11 +28,33 @@ async function hasGhCopilot() {
 }
 
 async function main() {
-  const bin = resolveCopilotBin();
+  let bin = resolveCopilotBin();
+
+  if (process.platform === "win32" && bin === "copilot") {
+    const where = spawnSync("where", ["copilot"], { encoding: "utf-8" });
+    if (where.status === 0) {
+      const candidates = (where.stdout || "")
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const preferred = candidates.find((p) => /\.(cmd|exe)$/i.test(p));
+      if (preferred) {
+        bin = preferred;
+      } else {
+        // Only PowerShell shims are present and may be blocked by policy.
+        bin = null;
+      }
+    }
+  }
 
   if (bin) {
     const code = await run(bin, args);
-    process.exit(code);
+    if (code === 0) {
+      process.exit(0);
+    }
+    // If the detected binary is not runnable in this shell (e.g. blocked
+    // PowerShell shim), continue to gh copilot fallback.
+    console.log("Detected Copilot binary did not run successfully. Trying gh copilot fallback...");
   }
 
   // Fallback for environments where standalone `copilot` is absent:
